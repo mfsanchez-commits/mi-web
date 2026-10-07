@@ -1,0 +1,58 @@
+name: Test Claude WIF
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-claude:
+    runs-on: ubuntu-latest
+
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: fdrl_01REypjRsYRfZU4WMRiH4oTW
+      ANTHROPIC_ORGANIZATION_ID: 0381df08-33ba-4e53-8e85-81b32e04ebcc
+      ANTHROPIC_SERVICE_ACCOUNT_ID: svac_01U5WDKPxAyX8yP1gC5DK66U
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
+
+    steps:
+      - name: Fetch GitHub OIDC token
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const token = await core.getIDToken('https://api.anthropic.com');
+            fs.writeFileSync('/tmp/gha-jwt', token);
+
+      - name: Install Anthropic SDK
+        run: pip install anthropic
+
+      - name: Test Claude
+        run: |
+          python - <<'PY'
+          import anthropic
+
+          client = anthropic.Anthropic()
+
+          message = client.messages.create(
+              model="claude-opus-5-5",
+              max_tokens=100,
+              messages=[
+                  {
+                      "role": "user",
+                      "content": "Responde solamente: WIF FUNCIONA"
+                  }
+              ],
+          )
+
+          print(next(
+              block.text
+              for block in message.content
+              if block.type == "text"
+          ))
+          PY

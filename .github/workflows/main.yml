@@ -49,16 +49,16 @@ steps:
             PY
 
         - name: Install Anthropic SDK
-        run: pip install anthropic
+          run: pip install anthropic
 
         - name: Test Claude
-        run: |
-          python - <<'PY'
-          import anthropic
+          run: |
+           python - <<'PY'
+           import anthropic
 
-          client = anthropic.Anthropic()
+           client = anthropic.Anthropic()
 
-          message = client.messages.create(
+           message = client.messages.create(
               model="claude-opus-5-5",
               max_tokens=100,
               messages=[
@@ -66,12 +66,8 @@ steps:
                       "role": "user",
                       "content": "Responde solamente: WIF FUNCIONA"
                   }
-              ],
-          )
+              ]
+           )
 
-          print(next(
-              block.text
-              for block in message.content
-              if block.type == "text"
-          ))
-          PY
+           print(message.content[0].text)
+           PY

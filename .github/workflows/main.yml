@@ -21,15 +21,16 @@ jobs:
       ANTHROPIC_WORKSPACE_ID: wrkspc_01RrDtRkcdE3Sh493PbRrGsm
       ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
 
-    steps:
-      - name: Fetch GitHub OIDC token
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-            const token = await core.getIDToken('https://api.anthropic.com');
-            fs.writeFileSync('/tmp/gha-jwt', token);
-                    - name: Debug OIDC claims
+          steps:
+        - name: Fetch GitHub OIDC token
+          uses: actions/github-script@v8
+          with:
+            script: |
+              const fs = require('fs');
+              const token = await core.getIDToken('https://api.anthropic.com');
+              fs.writeFileSync('/tmp/gha-jwt', token);
+
+        - name: Debug OIDC claims
           run: |
             python - <<'PY'
             import base64, json
@@ -46,6 +47,9 @@ jobs:
             print("ref =", claims.get("ref"))
             print("event_name =", claims.get("event_name"))
             PY
+
+        - name: Install Anthropic SDK
+          run: pip install anthropic
 
         - name: Install Anthropic SDK
           run: pip install anthropic

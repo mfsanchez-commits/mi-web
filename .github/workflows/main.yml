@@ -49,18 +49,9 @@ steps:
             PY
 
         - name: Install Anthropic SDK
-          run: pip install anthropic
-
-        - name: Install Anthropic SDK
-          run: pip install anthropic
-
-        - name: Install Anthropic SDK
-          run: pip install anthropic
-
-      - name: Install Anthropic SDK
         run: pip install anthropic
 
-      - name: Test Claude
+        - name: Test Claude
         run: |
           python - <<'PY'
           import anthropic

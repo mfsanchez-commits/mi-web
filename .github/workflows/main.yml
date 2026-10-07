@@ -21,7 +21,7 @@ jobs:
       ANTHROPIC_WORKSPACE_ID: wrkspc_01RrDtRkcdE3Sh493PbRrGsm
       ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
 
-steps:
+    steps:
         - name: Fetch GitHub OIDC token
           uses: actions/github-script@v8
           with:

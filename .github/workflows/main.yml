@@ -29,6 +29,26 @@ jobs:
             const fs = require('fs');
             const token = await core.getIDToken('https://api.anthropic.com');
             fs.writeFileSync('/tmp/gha-jwt', token);
+                    - name: Debug OIDC claims
+          run: |
+            python - <<'PY'
+            import base64, json
+
+            token = open('/tmp/gha-jwt').read()
+            payload = token.split('.')[1]
+            payload += '=' * (-len(payload) % 4)
+            claims = json.loads(base64.urlsafe_b64decode(payload))
+
+            print("iss =", claims.get("iss"))
+            print("sub =", claims.get("sub"))
+            print("aud =", claims.get("aud"))
+            print("repository =", claims.get("repository"))
+            print("ref =", claims.get("ref"))
+            print("event_name =", claims.get("event_name"))
+            PY
+
+        - name: Install Anthropic SDK
+          run: pip install anthropic
 
       - name: Install Anthropic SDK
         run: pip install anthropic

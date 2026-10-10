@@ -1,0 +1,15 @@
+{
+  "name":"numelio-ai",
+  "version":"1.0.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"start":"node server.js"},
+  "dependencies":{
+    "@anthropic-ai/sdk":"^0.69.0",
+    "express":"^5.1.0",
+    "multer":"^2.0.2",
+    "pdf-parse":"^1.1.1",
+    "cors":"^2.8.5",
+    "dotenv":"^17.2.3"
+  }
+}

@@ -1,0 +1,3 @@
+const saved=localStorage.getItem("numelio-theme");if(saved==="dark")document.documentElement.classList.add("dark");
+document.getElementById("themeBtn")?.addEventListener("click",()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("numelio-theme",document.documentElement.classList.contains("dark")?"dark":"light")});
+document.getElementById("search")?.addEventListener("input",e=>{const q=e.target.value.toLowerCase();document.querySelectorAll(".card").forEach(c=>c.style.display=c.dataset.name.includes(q)?"block":"none")});

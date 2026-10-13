@@ -39,7 +39,7 @@ Asignatura: ${subject}. Dificultad: ${difficulty}. Preguntas: ${count}.
 Combina tipo test (4 opciones) y respuesta corta. Reparte las preguntas por el contenido disponible. No inventes datos externos.
 Devuelve SOLO JSON válido: {"title":"...","questions":[{"type":"choice","question":"...","options":["...","...","...","..."],"answer":0,"explanation":"..."},{"type":"short","question":"...","answer":"respuesta esperada","explanation":"..."}]}
 APUNTES:\n${text.slice(0,120000)}`;
-    const msg=await client.messages.create({model:"claude-sonnet-4-5",max_tokens:6000,messages:[{role:"user",content:prompt}]});
+    const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:6000,messages:[{role:"user",content:prompt}]});
     const raw=msg.content?.find(x=>x.type==="text")?.text||"";
     const exam=JSON.parse(cleanJson(raw));
     res.json(exam);
@@ -58,7 +58,7 @@ Asignatura: ${subject}.
 Para preguntas tipo test, usa la respuesta indicada en answer (índice). Para respuestas cortas, valora el significado y no exijas que coincida literalmente.
 Devuelve SOLO JSON válido: {"score":8.5,"correct":8,"total":10,"summary":"...","results":[{"index":0,"correct":true,"score":1,"feedback":"...","expected":"..."}]}
 Examen y respuestas:\n${JSON.stringify(questions)}\nRESPUESTAS DEL ALUMNO:\n${JSON.stringify(answers)}`;
-    const msg=await client.messages.create({model:"claude-sonnet-4-5",max_tokens:5000,messages:[{role:"user",content:prompt}]});
+    const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:5000,messages:[{role:"user",content:prompt}]});
     const raw=msg.content?.find(x=>x.type==="text")?.text||"";
     res.json(JSON.parse(cleanJson(raw)));
   }catch(err){

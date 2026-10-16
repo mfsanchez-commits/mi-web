@@ -8,3 +8,5 @@ const supabaseClient = window.supabase.createClient(
 );
 
 window.numelioSupabase = supabaseClient;
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase.js"></script>

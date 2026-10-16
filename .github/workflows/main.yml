@@ -70,5 +70,5 @@ jobs:
            )
 
            for block in message.content:
-    if block.type == "text":
-        print(block.text)
+               if block.type == "text":
+                  print(block.text)

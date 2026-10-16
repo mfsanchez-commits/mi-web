@@ -69,5 +69,6 @@ jobs:
               ]
            )
 
-           print(message.content[0].text)
-           PY
+           for block in message.content:
+    if block.type == "text":
+        print(block.text)

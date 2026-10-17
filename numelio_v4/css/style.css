@@ -7,3 +7,13 @@ a{text-decoration:none;color:inherit}.topbar{height:72px;display:flex;align-item
 .dark{--bg:#0d1117;--surface:#151b23;--text:#f4f6f8;--muted:#9ca6b5;--line:#29313d;--primary:#8d82ff}.dark .topbar{background:#0d1117dd}.dark .result{background:#211e40;border-color:#383262}
 @media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:50px}.grid{grid-template-columns:1fr 1fr}.banner{margin:0 22px 60px;display:block}.settings,.form{grid-template-columns:1fr}.full{grid-column:auto}}
 @media(max-width:520px){nav>a{display:none}.grid{grid-template-columns:1fr}h1{letter-spacing:-2px}}
+
+.login-link {
+  color: #4f46e5 !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-link:hover {
+  color: #3730a3 !important;
+}

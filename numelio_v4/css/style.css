@@ -1,12 +1,15 @@
 
 :root {
   --bg: #f7f8fc;
-  --surface: #fff;
+  --surface: #ffffff;
   --text: #101522;
   --muted: #697386;
   --line: #e3e6ed;
   --primary: #5b4bff;
   --shadow: 0 18px 50px #10152212;
+  --banner-bg: #101522;
+  --banner-text: #ffffff;
+  --banner-muted: #c5ccda;
 }
 
 * {
@@ -25,8 +28,8 @@ body {
 }
 
 a {
-  text-decoration: none;
   color: inherit;
+  text-decoration: none;
 }
 
 .topbar {
@@ -34,9 +37,9 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 12px max(22px, calc((100% - 1150px) / 2));
-  background: #ffffffd9;
-  backdrop-filter: blur(14px);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
@@ -46,6 +49,7 @@ a {
 .brand {
   font-weight: 900;
   font-size: 21px;
+  white-space: nowrap;
 }
 
 .brand:first-letter {
@@ -54,7 +58,7 @@ a {
 
 nav {
   display: flex;
-  gap: 22px;
+  gap: 18px;
   align-items: center;
   font-weight: 650;
   font-size: 14px;
@@ -63,6 +67,7 @@ nav {
 nav button {
   border: 1px solid var(--line);
   background: var(--surface);
+  color: var(--text);
   border-radius: 10px;
   padding: 9px 12px;
   cursor: pointer;
@@ -70,8 +75,7 @@ nav button {
 
 .login-link {
   color: #4f46e5 !important;
-  font-weight: 700;
-  text-decoration: none;
+  font-weight: 750;
   white-space: nowrap;
 }
 
@@ -79,18 +83,18 @@ nav button {
   color: #3730a3 !important;
 }
 
-/* PORTADA: texto y panel en dos columnas */
+/* Portada */
 .hero {
   max-width: 1150px;
   margin: auto;
-  padding: 80px 22px;
+  padding: 70px 22px;
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
-  gap: 60px;
+  gap: 48px;
   align-items: center;
 }
 
-.hero > div:first-child {
+.hero-content {
   min-width: 0;
 }
 
@@ -119,20 +123,21 @@ h1 span {
   max-width: 650px;
 }
 
-/* Botones de la portada */
+/* Botones */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: fit-content;
   max-width: 100%;
-  padding: 13px 18px;
+  padding: 12px 17px;
   border: 1px solid var(--line);
   border-radius: 12px;
   font-weight: 750;
   margin: 8px 8px 0 0;
   background: var(--surface);
-  transition: 0.2s;
+  color: var(--text);
+  transition: transform 0.2s, background 0.2s;
 }
 
 .btn:hover {
@@ -141,12 +146,11 @@ h1 span {
 
 .primary {
   background: var(--primary);
-  color: #fff;
+  color: #ffffff;
   border-color: var(--primary);
 }
 
-/* El botón Mi espacio queda debajo de los dos botones principales.
-   Funciona si está dentro del mismo contenedor que esos botones. */
+/* Grupo de botones de portada */
 .hero-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -158,14 +162,17 @@ h1 span {
   margin: 0;
 }
 
+/* Mi espacio ocupa solo el ancho de su texto */
 .hero-buttons .space-link {
-  flex-basis: 100%;
+  flex: 0 0 auto;
   width: fit-content;
-  justify-self: start;
+  padding: 10px 16px;
+  margin-top: 4px;
 }
 
-/* Panel derecho */
+/* Panel de Calculadoras, apuntes y exámenes */
 .hero-panel {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
@@ -188,11 +195,12 @@ h1 span {
   margin: 5px 0 0 30px;
 }
 
-/* Secciones y tarjetas */
+/* Herramientas */
 .section {
   max-width: 1150px;
   margin: auto;
   padding: 20px 22px 80px;
+  scroll-margin-top: 90px;
 }
 
 .section h2 {
@@ -207,6 +215,7 @@ h1 span {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
+  color: var(--text);
   font: inherit;
   margin-bottom: 22px;
 }
@@ -224,7 +233,7 @@ h1 span {
   padding: 24px;
   min-height: 180px;
   position: relative;
-  transition: 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
@@ -258,12 +267,12 @@ h1 span {
   border-radius: 7px;
 }
 
-/* Banner */
+/* Zona de estudio: contraste correcto en ambos modos */
 .banner {
   max-width: 1150px;
   margin: 0 auto 75px;
-  background: var(--text);
-  color: #fff;
+  background: var(--banner-bg);
+  color: var(--banner-text);
   border-radius: 27px;
   padding: 42px;
   display: flex;
@@ -273,7 +282,7 @@ h1 span {
 }
 
 .banner p {
-  color: #b9c0cc;
+  color: var(--banner-muted);
   line-height: 1.6;
   max-width: 700px;
 }
@@ -288,7 +297,7 @@ footer {
   color: var(--muted);
 }
 
-/* Páginas de herramientas */
+/* Herramientas y formularios */
 .page {
   max-width: 900px;
   margin: auto;
@@ -338,6 +347,7 @@ footer {
   border-radius: 14px;
   background: #efedff;
   border: 1px solid #ddd8ff;
+  color: #252044;
 }
 
 .result strong {
@@ -370,6 +380,7 @@ footer {
   padding: 18px;
   border-radius: 15px;
   margin: 13px 0;
+  background: var(--surface);
 }
 
 .question textarea {
@@ -387,28 +398,57 @@ footer {
   border-radius: 14px;
   background: #edfff5;
   border: 1px solid #bce9ce;
+  color: #123b27;
 }
 
 /* Modo oscuro */
 .dark {
-  --bg: #0d1117;
-  --surface: #151b23;
-  --text: #f4f6f8;
-  --muted: #9ca6b5;
-  --line: #29313d;
-  --primary: #8d82ff;
+  --bg: #10141d;
+  --surface: #1a2230;
+  --text: #f2f5fb;
+  --muted: #b3bdcc;
+  --line: #303b4c;
+  --primary: #9287ff;
+  --shadow: 0 18px 50px #00000030;
+  --banner-bg: #202a3a;
+  --banner-text: #f5f7fc;
+  --banner-muted: #c7d0df;
 }
 
 .dark .topbar {
-  background: #0d1117dd;
+  background: #141b27;
+}
+
+.dark .login-link {
+  color: #b6adff !important;
+}
+
+.dark .login-link:hover {
+  color: #d2ccff !important;
+}
+
+.dark .card b {
+  background: #302a52;
+  color: #c8c0ff;
 }
 
 .dark .result {
-  background: #211e40;
-  border-color: #383262;
+  background: #282443;
+  border-color: #49416e;
+  color: #f2efff;
 }
 
-/* Diseño adaptable */
+.dark .score {
+  background: #173426;
+  border-color: #285b40;
+  color: #d8fbe5;
+}
+
+.dark .upload {
+  border-color: #46546a;
+}
+
+/* Adaptación a tablet y móvil */
 @media (max-width: 800px) {
   .hero {
     grid-template-columns: 1fr;
@@ -417,7 +457,7 @@ footer {
   }
 
   .grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .banner {
@@ -437,9 +477,9 @@ footer {
 
 @media (max-width: 520px) {
   .topbar {
-    gap: 12px;
     padding-left: 16px;
     padding-right: 16px;
+    gap: 10px;
   }
 
   nav {
@@ -448,6 +488,10 @@ footer {
 
   nav > a:not(.login-link) {
     display: none;
+  }
+
+  .login-link {
+    font-size: 13px;
   }
 
   .grid {
@@ -461,5 +505,17 @@ footer {
   .hero {
     padding: 45px 18px;
   }
+
+  .section {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .banner {
+    margin-left: 18px;
+    margin-right: 18px;
+    padding: 28px;
+  }
 }
+
 

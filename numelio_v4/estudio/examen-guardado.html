@@ -10,8 +10,8 @@
 <body>
 <header class="topbar"><a class="brand" href="../index.html">✦ Numelio</a><nav><a href="../apuntes.html">Mis apuntes</a><button id="themeBtn" type="button">☾</button></nav></header>
 <main class="exam-page">
-<span class="eyebrow">ZONA DE ESTUDIO · IA</span><h1>Crear examen desde un PDF guardado</h1>
-<p style="color:var(--muted);line-height:1.6">Numelio leerá el PDF que guardaste y preparará preguntas a partir de su contenido.</p>
+<span class="eyebrow">ZONA DE ESTUDIO · IA</span><h1>Crear examen con apuntes guardados</h1>
+<p style="color:var(--muted);line-height:1.6">Numelio leerá el texto, las fotos o el PDF guardado para preparar preguntas a partir de tus apuntes.</p>
 <section class="exam-panel">
 <h2 id="noteTitle">Cargando apunte…</h2><p id="noteSubject" style="color:var(--muted)"></p>
 <div class="exam-options">
@@ -47,22 +47,27 @@ async function init(){
 }
 generateBtn.addEventListener("click",async()=>{
  if(!note||!userId)return;
- generateBtn.disabled=true;generateBtn.textContent="⏳ Leyendo PDF…";statusEl.textContent="Descargando tu PDF privado y extrayendo el texto…";quiz.innerHTML="";
+ generateBtn.disabled=true;generateBtn.textContent="⏳ Leyendo apuntes…";statusEl.textContent="Descargando tus apuntes privados y leyendo su contenido…";quiz.innerHTML="";
  try{
   const fd=new FormData();
   if(note.archivo_path){
-    if((note.archivo_tipo||"").toLowerCase()!=="application/pdf" && !(note.archivo_nombre||"").toLowerCase().endsWith(".pdf")) throw new Error("Por ahora la lectura automática de archivos adjuntos admite PDF. Para imágenes, necesitamos añadir OCR.");
+    const allowedTypes=["application/pdf","image/jpeg","image/png","image/webp"];
+    const fileType=(note.archivo_tipo||"").toLowerCase();
+    const fileName=(note.archivo_nombre||"").toLowerCase();
+    const isPdf=fileType==="application/pdf"||fileName.endsWith(".pdf");
+    const isImage=allowedTypes.includes(fileType)&&fileType.startsWith("image/")||/\\.(jpg|jpeg|png|webp)$/.test(fileName);
+    if(!isPdf&&!isImage) throw new Error("Este formato no está admitido. Usa PDF, JPG, PNG o WEBP.");
     const {data:urlData,error:urlError}=await sb.storage.from("archivos-apuntes").createSignedUrl(note.archivo_path,60);
     if(urlError)throw urlError;
-    const response=await fetch(urlData.signedUrl);if(!response.ok)throw new Error("No se ha podido descargar el PDF guardado.");
-    const blob=await response.blob();const file=new File([blob],note.archivo_nombre||"apuntes.pdf",{type:"application/pdf"});
+    const response=await fetch(urlData.signedUrl);if(!response.ok)throw new Error("No se ha podido descargar el archivo guardado.");
+    const blob=await response.blob();const file=new File([blob],note.archivo_nombre||(isPdf?"apuntes.pdf":"foto-apuntes.png"),{type:isPdf?"application/pdf":(fileType||blob.type)});
     fd.append("file",file);
   }
   if((note.contenido||"").trim())fd.append("notesText",note.contenido);
   fd.append("subject",document.getElementById("subject").value);fd.append("count",document.getElementById("count").value);fd.append("difficulty",document.getElementById("difficulty").value);
   statusEl.textContent="La IA está leyendo tus apuntes y creando las preguntas…";
   const r=await fetch("/api/generate-exam",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||"No se ha podido generar el examen.");
-  currentExam=data;renderExam(data);statusEl.textContent="Examen generado a partir de tu PDF. ¡A practicar!";
+  currentExam=data;renderExam(data);statusEl.textContent="Examen generado a partir de tus apuntes. ¡A practicar!";
  }catch(e){statusEl.textContent="No se ha podido generar el examen: "+(e.message||"Error desconocido");}
  finally{generateBtn.disabled=false;generateBtn.textContent="✨ Generar examen";}
 });

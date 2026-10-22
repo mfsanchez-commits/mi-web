@@ -116,7 +116,7 @@
           ${note.archivo_nombre ? '<p>📎 ' + escapeHtml(note.archivo_nombre) + '</p>' : ''}
           <div class="note-actions">
             ${note.archivo_path ? '<button type="button" data-file="' + note.id + '">Abrir archivo</button>' : ''}
-            ${note.archivo_path && note.archivo_tipo === 'application/pdf' ? '<button type="button" data-exam="' + note.id + '">Crear examen con este PDF</button>' : ''}
+            ${note.archivo_path && ((note.archivo_tipo || '').toLowerCase() === 'application/pdf' || (note.archivo_nombre || '').toLowerCase().endsWith('.pdf')) ? '<button type="button" data-exam="' + note.id + '">Crear examen con este PDF</button>' : ''}
             <button type="button" data-edit="${note.id}">Editar</button>
             <button type="button" class="delete-note" data-delete="${note.id}">Eliminar</button>
           </div>

@@ -47,8 +47,8 @@
       <article class="space-card">
         <div class="space-icon">📚</div>
         <h2>Mis apuntes</h2>
-        <p>En el siguiente paso podrás guardar y organizar tus apuntes por asignatura.</p>
-        <span class="eyebrow">PRÓXIMAMENTE</span>
+        <p>Guarda, edita y organiza tus apuntes por asignatura.</p>
+        <a class="btn primary" href="apuntes.html">Abrir mis apuntes →</a>
       </article>
       <article class="space-card">
         <div class="space-icon">📝</div>
@@ -98,7 +98,7 @@
         return;
       }
       userEmail.textContent = data.session.user.email || "Usuario";
-      spaceMessage.textContent = "Tu sesión está activa. Estamos preparando las funciones para guardar tus materiales.";
+      spaceMessage.textContent = "Tu sesión está activa. Ya puedes guardar tus apuntes por asignatura.";
     }
 
     logoutBtn.addEventListener("click", async () => {

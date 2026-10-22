@@ -17,6 +17,9 @@
     .notes-field label{display:block;font-size:13px;font-weight:750;margin-bottom:7px}
     .notes-field input,.notes-field select,.notes-field textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
     .notes-field textarea{min-height:180px;resize:vertical;line-height:1.5}
+    .file-help{font-size:12px;color:var(--muted);line-height:1.5}
+    .attachment-name{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+    .file-preview{max-width:100%;max-height:180px;border-radius:10px;margin-top:8px}
     .notes-list{display:grid;gap:12px}
     .note-item{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--bg)}
     .note-item h3{margin:7px 0;font-size:17px;overflow-wrap:anywhere}
@@ -46,7 +49,8 @@
         <form id="noteForm">
           <div class="notes-field"><label for="subject">Asignatura</label><select id="subject" required><option>Matemáticas</option><option>Lengua</option><option>Física y Química</option><option>Biología</option><option>Geografía e Historia</option><option>Francés</option><option>Deporte</option><option>Religión</option><option>General</option><option>Otra</option></select></div>
           <div class="notes-field"><label for="title">Título</label><input id="title" maxlength="120" placeholder="Ej. La Primera Guerra Mundial" required></div>
-          <div class="notes-field"><label for="content">Contenido</label><textarea id="content" maxlength="50000" placeholder="Escribe o pega aquí tus apuntes..." required></textarea></div>
+          <div class="notes-field"><label for="content">Contenido (opcional si adjuntas un archivo)</label><textarea id="content" maxlength="50000" placeholder="Escribe o pega aquí tus apuntes..."></textarea></div>
+          <div class="notes-field"><label for="attachment">Adjuntar fotos o PDF</label><input id="attachment" type="file" accept=".pdf,image/jpeg,image/png,image/webp,application/pdf" multiple><p class="file-help">Puedes elegir imágenes JPG, PNG o WEBP y archivos PDF. Máximo 10 MB por archivo. También puedes pegar texto en el campo de contenido.</p><div id="selectedFiles" class="attachment-name">No has seleccionado archivos.</div></div>
           <button class="btn primary" id="saveBtn" type="submit">Guardar apunte</button>
           <button class="btn" id="cancelEditBtn" type="button" hidden>Cancelar edición</button>
         </form>
@@ -66,6 +70,8 @@
     const subject = document.getElementById("subject");
     const title = document.getElementById("title");
     const content = document.getElementById("content");
+    const attachment = document.getElementById("attachment");
+    const selectedFiles = document.getElementById("selectedFiles");
     const list = document.getElementById("notesList");
     const status = document.getElementById("notesStatus");
     const saveBtn = document.getElementById("saveBtn");
@@ -91,6 +97,7 @@
     function resetForm() {
       editingId = null;
       form.reset();
+      selectedFiles.textContent = "No has seleccionado archivos.";
       formHeading.textContent = "Crear un apunte";
       saveBtn.textContent = "Guardar apunte";
       cancelEditBtn.hidden = true;
@@ -105,8 +112,10 @@
         <article class="note-item">
           <span class="note-meta">${escapeHtml(note.asignatura)}</span>
           <h3>${escapeHtml(note.titulo)}</h3>
-          <p>${escapeHtml(note.contenido.length > 700 ? note.contenido.slice(0,700) + "…" : note.contenido)}</p>
+          ${note.contenido ? '<p>' + escapeHtml(note.contenido.length > 700 ? note.contenido.slice(0,700) + "…" : note.contenido) + '</p>' : ''}
+          ${note.archivo_nombre ? '<p>📎 ' + escapeHtml(note.archivo_nombre) + '</p>' : ''}
           <div class="note-actions">
+            ${note.archivo_path ? '<button type="button" data-file="' + note.id + '">Abrir archivo</button>' : ''}
             <button type="button" data-edit="${note.id}">Editar</button>
             <button type="button" class="delete-note" data-delete="${note.id}">Eliminar</button>
           </div>
@@ -114,7 +123,7 @@
     }
 
     async function loadNotes() {
-      const { data, error } = await sb.from("apuntes").select("id,user_id,asignatura,titulo,contenido,created_at").eq("user_id", currentUserId).order("updated_at", { ascending:false });
+      const { data, error } = await sb.from("apuntes").select("id,user_id,asignatura,titulo,contenido,archivo_nombre,archivo_path,archivo_tipo,created_at").eq("user_id", currentUserId).order("updated_at", { ascending:false });
       if (error) {
         list.innerHTML = '<p class="empty-notes">No se han podido cargar los apuntes.</p>';
         status.textContent = "La base de datos aún no está configurada. Sigue los pasos de configuración indicados en el proyecto y vuelve a cargar esta página. Detalle: " + error.message;
@@ -125,9 +134,20 @@
       status.textContent = "Tus apuntes están guardados en tu cuenta. Solo tú puedes verlos.";
     }
 
+    attachment.addEventListener("change", () => {
+      const files = Array.from(attachment.files || []);
+      if (files.some(file => file.size > 10 * 1024 * 1024)) {
+        selectedFiles.textContent = "Hay un archivo de más de 10 MB. Selecciona archivos más pequeños.";
+        attachment.value = "";
+        return;
+      }
+      selectedFiles.textContent = files.length ? files.map(file => file.name).join(", ") : "No has seleccionado archivos.";
+    });
+
     form.addEventListener("submit", async event => {
       event.preventDefault();
       if (!currentUserId) return;
+      const files = Array.from(attachment.files || []);
       const record = {
         user_id: currentUserId,
         asignatura: subject.value,
@@ -135,18 +155,54 @@
         contenido: content.value.trim(),
         updated_at: new Date().toISOString()
       };
-      if (!record.titulo || !record.contenido) {
-        status.textContent = "Escribe un título y el contenido del apunte.";
+      if (!record.titulo || (!record.contenido && files.length === 0 && !editingId)) {
+        status.textContent = "Escribe un título y añade texto o adjunta al menos un archivo.";
+        return;
+      }
+      if (files.length > 1) {
+        status.textContent = "Por ahora, adjunta un solo archivo por apunte. Puedes crear más apuntes para los demás archivos.";
+        return;
+      }
+      if (files.some(file => file.size > 10 * 1024 * 1024)) {
+        status.textContent = "Cada archivo debe pesar como máximo 10 MB.";
         return;
       }
       saveBtn.disabled = true;
       status.textContent = editingId ? "Guardando cambios…" : "Guardando apunte…";
+      let filePath = null;
+      let fileName = null;
+      let fileType = null;
+      if (files.length) {
+        const file = files[0];
+        const allowed = ["application/pdf","image/jpeg","image/png","image/webp"];
+        if (!allowed.includes(file.type)) {
+          status.textContent = "Formato no admitido. Usa PDF, JPG, PNG o WEBP.";
+          saveBtn.disabled = false;
+          return;
+        }
+        filePath = currentUserId + "/" + crypto.randomUUID() + "-" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const { error: uploadError } = await sb.storage.from("archivos-apuntes").upload(filePath, file, {contentType:file.type,upsert:false});
+        if (uploadError) {
+          status.textContent = "No se ha podido subir el archivo. Comprueba que has ejecutado el SQL actualizado. " + uploadError.message;
+          saveBtn.disabled = false;
+          return;
+        }
+        fileName = file.name;
+        fileType = file.type;
+      }
+      const fields = {...record};
+      if (files.length) {
+        fields.archivo_path = filePath;
+        fields.archivo_nombre = fileName;
+        fields.archivo_tipo = fileType;
+      }
       const result = editingId
-        ? await sb.from("apuntes").update(record).eq("id", editingId).eq("user_id", currentUserId)
-        : await sb.from("apuntes").insert(record);
+        ? await sb.from("apuntes").update(fields).eq("id", editingId).eq("user_id", currentUserId)
+        : await sb.from("apuntes").insert(fields);
       saveBtn.disabled = false;
       if (result.error) {
-        status.textContent = "No se ha podido guardar. Comprueba que has ejecutado el SQL de configuración. " + result.error.message;
+        if (filePath) await sb.storage.from("archivos-apuntes").remove([filePath]);
+        status.textContent = "No se ha podido guardar. Comprueba que has ejecutado el SQL actualizado. " + result.error.message;
         return;
       }
       resetForm();
@@ -156,8 +212,19 @@
     cancelEditBtn.addEventListener("click", resetForm);
 
     list.addEventListener("click", async event => {
+      const fileId = event.target.closest("[data-file]")?.dataset.file;
       const editId = event.target.closest("[data-edit]")?.dataset.edit;
       const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
+      if (fileId) {
+        const note = allNotes.find(item => item.id === fileId);
+        if (!note?.archivo_path) return;
+        const { data, error } = await sb.storage.from("archivos-apuntes").createSignedUrl(note.archivo_path, 60);
+        if (error) {
+          status.textContent = "No se ha podido abrir el archivo: " + error.message;
+          return;
+        }
+        window.open(data.signedUrl, "_blank", "noopener");
+      }
       if (editId) {
         const note = allNotes.find(item => item.id === editId);
         if (!note) return;
@@ -180,6 +247,7 @@
           status.textContent = "No se ha podido eliminar el apunte: " + error.message;
           return;
         }
+        if (note.archivo_path) await sb.storage.from("archivos-apuntes").remove([note.archivo_path]);
         if (editingId === deleteId) resetForm();
         await loadNotes();
       }

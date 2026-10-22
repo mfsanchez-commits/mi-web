@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis apuntes — Numelio</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .notes-page{max-width:1000px;margin:auto;padding:42px 22px 80px}
+    .notes-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+    .notes-head h1{font-size:clamp(34px,5vw,50px);letter-spacing:-1.5px;margin:10px 0}
+    .notes-sub{color:var(--muted);line-height:1.6}
+    .notes-layout{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:20px;margin-top:28px;align-items:start}
+    .notes-panel{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow);min-width:0}
+    .notes-panel h2{font-size:21px;margin:0 0 18px}
+    .notes-field{margin:14px 0}
+    .notes-field label{display:block;font-size:13px;font-weight:750;margin-bottom:7px}
+    .notes-field input,.notes-field select,.notes-field textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+    .notes-field textarea{min-height:180px;resize:vertical;line-height:1.5}
+    .notes-list{display:grid;gap:12px}
+    .note-item{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--bg)}
+    .note-item h3{margin:7px 0;font-size:17px;overflow-wrap:anywhere}
+    .note-item p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;color:var(--muted);margin:8px 0}
+    .note-meta{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--primary);text-transform:uppercase}
+    .note-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .note-actions button{cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:9px;padding:8px 11px;font-weight:700}
+    .note-actions .delete-note{color:#c24141}
+    .notes-status{margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:12px;color:var(--muted);overflow-wrap:anywhere}
+    .empty-notes{color:var(--muted);line-height:1.6}
+    @media(max-width:720px){.notes-layout{grid-template-columns:1fr}.notes-page{padding:30px 18px 60px}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">✦ Numelio</a>
+    <nav><a href="mi-espacio.html">Mi espacio</a><button type="button" id="themeBtn" aria-label="Cambiar tema">☾</button></nav>
+  </header>
+  <main class="notes-page">
+    <div class="notes-head">
+      <div><span class="eyebrow">TU ZONA DE ESTUDIO</span><h1>Mis apuntes</h1><p class="notes-sub">Guarda apuntes por asignatura y vuelve a consultarlos cuando quieras.</p></div>
+      <a class="btn" href="mi-espacio.html">← Volver a Mi espacio</a>
+    </div>
+    <div class="notes-layout">
+      <section class="notes-panel">
+        <h2 id="formHeading">Crear un apunte</h2>
+        <form id="noteForm">
+          <div class="notes-field"><label for="subject">Asignatura</label><select id="subject" required><option>Matemáticas</option><option>Lengua</option><option>Física y Química</option><option>Biología</option><option>Geografía e Historia</option><option>Francés</option><option>Deporte</option><option>Religión</option><option>General</option><option>Otra</option></select></div>
+          <div class="notes-field"><label for="title">Título</label><input id="title" maxlength="120" placeholder="Ej. La Primera Guerra Mundial" required></div>
+          <div class="notes-field"><label for="content">Contenido</label><textarea id="content" maxlength="50000" placeholder="Escribe o pega aquí tus apuntes..." required></textarea></div>
+          <button class="btn primary" id="saveBtn" type="submit">Guardar apunte</button>
+          <button class="btn" id="cancelEditBtn" type="button" hidden>Cancelar edición</button>
+        </form>
+      </section>
+      <section class="notes-panel">
+        <h2>Apuntes guardados</h2>
+        <div id="notesList" class="notes-list"><p class="empty-notes">Cargando tus apuntes…</p></div>
+      </section>
+    </div>
+    <p class="notes-status" id="notesStatus" role="status" aria-live="polite">Comprobando tu sesión…</p>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase.js"></script>
+  <script>
+    const sb = window.numelioSupabase;
+    const form = document.getElementById("noteForm");
+    const subject = document.getElementById("subject");
+    const title = document.getElementById("title");
+    const content = document.getElementById("content");
+    const list = document.getElementById("notesList");
+    const status = document.getElementById("notesStatus");
+    const saveBtn = document.getElementById("saveBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const formHeading = document.getElementById("formHeading");
+    let currentUserId = null;
+    let editingId = null;
+    let allNotes = [];
+
+    const savedTheme = localStorage.getItem("numelio-theme");
+    if (savedTheme === "dark") document.documentElement.classList.add("dark");
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark");
+      localStorage.setItem("numelio-theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+    });
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[char]));
+    }
+
+    function resetForm() {
+      editingId = null;
+      form.reset();
+      formHeading.textContent = "Crear un apunte";
+      saveBtn.textContent = "Guardar apunte";
+      cancelEditBtn.hidden = true;
+    }
+
+    function renderNotes() {
+      if (!allNotes.length) {
+        list.innerHTML = '<p class="empty-notes">Todavía no tienes apuntes guardados. Crea el primero con el formulario.</p>';
+        return;
+      }
+      list.innerHTML = allNotes.map(note => `
+        <article class="note-item">
+          <span class="note-meta">${escapeHtml(note.asignatura)}</span>
+          <h3>${escapeHtml(note.titulo)}</h3>
+          <p>${escapeHtml(note.contenido.length > 700 ? note.contenido.slice(0,700) + "…" : note.contenido)}</p>
+          <div class="note-actions">
+            <button type="button" data-edit="${note.id}">Editar</button>
+            <button type="button" class="delete-note" data-delete="${note.id}">Eliminar</button>
+          </div>
+        </article>`).join("");
+    }
+
+    async function loadNotes() {
+      const { data, error } = await sb.from("apuntes").select("id,user_id,asignatura,titulo,contenido,created_at").eq("user_id", currentUserId).order("updated_at", { ascending:false });
+      if (error) {
+        list.innerHTML = '<p class="empty-notes">No se han podido cargar los apuntes.</p>';
+        status.textContent = "La base de datos aún no está configurada. Sigue los pasos de configuración indicados en el proyecto y vuelve a cargar esta página. Detalle: " + error.message;
+        return;
+      }
+      allNotes = data || [];
+      renderNotes();
+      status.textContent = "Tus apuntes están guardados en tu cuenta. Solo tú puedes verlos.";
+    }
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!currentUserId) return;
+      const record = {
+        user_id: currentUserId,
+        asignatura: subject.value,
+        titulo: title.value.trim(),
+        contenido: content.value.trim(),
+        updated_at: new Date().toISOString()
+      };
+      if (!record.titulo || !record.contenido) {
+        status.textContent = "Escribe un título y el contenido del apunte.";
+        return;
+      }
+      saveBtn.disabled = true;
+      status.textContent = editingId ? "Guardando cambios…" : "Guardando apunte…";
+      const result = editingId
+        ? await sb.from("apuntes").update(record).eq("id", editingId).eq("user_id", currentUserId)
+        : await sb.from("apuntes").insert(record);
+      saveBtn.disabled = false;
+      if (result.error) {
+        status.textContent = "No se ha podido guardar. Comprueba que has ejecutado el SQL de configuración. " + result.error.message;
+        return;
+      }
+      resetForm();
+      await loadNotes();
+    });
+
+    cancelEditBtn.addEventListener("click", resetForm);
+
+    list.addEventListener("click", async event => {
+      const editId = event.target.closest("[data-edit]")?.dataset.edit;
+      const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
+      if (editId) {
+        const note = allNotes.find(item => item.id === editId);
+        if (!note) return;
+        editingId = note.id;
+        subject.value = note.asignatura;
+        if (subject.value !== note.asignatura) subject.value = "Otra";
+        title.value = note.titulo;
+        content.value = note.contenido;
+        formHeading.textContent = "Editar apunte";
+        saveBtn.textContent = "Guardar cambios";
+        cancelEditBtn.hidden = false;
+        form.scrollIntoView({behavior:"smooth",block:"start"});
+      }
+      if (deleteId) {
+        const note = allNotes.find(item => item.id === deleteId);
+        if (!note || !confirm('¿Quieres eliminar el apunte "' + note.titulo + '"?')) return;
+        status.textContent = "Eliminando apunte…";
+        const { error } = await sb.from("apuntes").delete().eq("id", deleteId).eq("user_id", currentUserId);
+        if (error) {
+          status.textContent = "No se ha podido eliminar el apunte: " + error.message;
+          return;
+        }
+        if (editingId === deleteId) resetForm();
+        await loadNotes();
+      }
+    });
+
+    async function init() {
+      if (!sb) {
+        status.textContent = "No se ha podido cargar Supabase.";
+        return;
+      }
+      const { data, error } = await sb.auth.getSession();
+      if (error || !data.session) {
+        window.location.replace("cuenta.html");
+        return;
+      }
+      currentUserId = data.session.user.id;
+      await loadNotes();
+    }
+    init();
+  </script>
+</body>
+</html>

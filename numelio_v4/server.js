@@ -99,6 +99,41 @@ app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
   finally{if(path)fs.unlink(path,()=>{});}
 });
 
+
+app.post("/api/generate-oral-exam", upload.single("file"), async (req,res)=>{
+ let path;
+ try{
+  let text="", visualSource=null;
+  if(req.file){
+   path=req.file.path;const buffer=fs.readFileSync(path);const filename=req.file.originalname.toLowerCase();
+   if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){const parsed=await pdfParse(buffer);text=(parsed.text||"").replace(/\\s+/g," ").trim();if(text.length<100)visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:buffer.toString("base64")}};}
+   else if(["image/jpeg","image/png","image/webp"].includes(req.file.mimetype))visualSource={type:"image",source:{type:"base64",media_type:req.file.mimetype,data:buffer.toString("base64")}};
+   else if(req.file.mimetype==="text/plain"||filename.endsWith(".txt"))text=buffer.toString("utf8");
+   else return res.status(400).json({error:"Formato no admitido. Usa PDF, TXT, JPG, PNG o WEBP."});
+  } else if(typeof req.body.notesText==="string")text=req.body.notesText;
+  else return res.status(400).json({error:"Añade tus apuntes o un archivo."});
+  text=text.replace(/\\s+/g," ").trim();
+  if(!visualSource&&text.length<40)return res.status(400).json({error:"No se ha podido leer suficiente texto de los apuntes."});
+  const count=Math.min(Math.max(Number(req.body.count)||5,3),10);
+  const prompt=`Prepara un examen oral en español basado EXCLUSIVAMENTE en estos apuntes. Crea ${count} preguntas abiertas, una por una, de dificultad progresiva. Para cada una incluye una respuesta esperada y los conceptos esenciales que debe mencionar el alumno. No uses conocimientos externos ni inventes. Devuelve SOLO JSON válido: {"title":"...","questions":[{"question":"...","expected":"...","keyPoints":["...","..."]}]}. Apuntes: ${text.slice(0,90000)}`;
+  const content=visualSource?[{type:"text",text:"Lee el archivo visual y usa solo información legible. "+prompt},visualSource]:prompt;
+  const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:4500,messages:[{role:"user",content}]});
+  const result=JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||""));
+  if(!Array.isArray(result.questions)||!result.questions.length)throw new Error("No se han generado preguntas válidas.");
+  res.json({title:result.title||"Examen oral",questions:result.questions.slice(0,count)});
+ }catch(err){console.error(err);res.status(500).json({error:"No se ha podido crear el examen oral. Revisa los logs de Render y la API de Anthropic."});}
+ finally{if(path)fs.unlink(path,()=>{});}
+});
+
+app.post("/api/grade-oral-answer", async(req,res)=>{
+ try{
+  const {question,expected,keyPoints,answer}=req.body||{};
+  if(!question||!answer?.trim())return res.status(400).json({error:"Falta la pregunta o tu respuesta."});
+  const prompt=`Evalúa en español la respuesta oral transcrita del alumno. Usa EXCLUSIVAMENTE la respuesta esperada y puntos clave derivados de sus apuntes. No penalices el estilo oral ni pequeñas muletillas; evalúa precisión, conceptos y omisiones. Nota de 0 a 10. Devuelve SOLO JSON válido: {"score":7,"feedback":"...","missing":["..."],"modelAnswer":"..."}. Pregunta: ${question}\nRespuesta esperada basada en apuntes: ${expected}\nPuntos clave: ${JSON.stringify(keyPoints||[])}\nRespuesta del alumno: ${answer}`;
+  const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:1200,messages:[{role:"user",content:prompt}]});
+  res.json(JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||"")));
+ }catch(err){console.error(err);res.status(500).json({error:"No se ha podido corregir la respuesta oral."});}
+});
 app.post("/api/grade-exam", async(req,res)=>{
   try{
     const {subject="General", questions=[], answers=[]}=req.body||{};

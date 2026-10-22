@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi espacio — Numelio</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .space-page { max-width: 1050px; margin: auto; padding: 48px 22px 80px; }
+    .space-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:28px; }
+    .space-heading h1 { font-size:clamp(32px,5vw,48px); letter-spacing:-1.5px; margin:10px 0; }
+    .space-email { color:var(--muted); overflow-wrap:anywhere; }
+    .space-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .space-card { background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:24px; box-shadow:var(--shadow); }
+    .space-card .space-icon { font-size:28px; }
+    .space-card h2 { font-size:21px; margin:12px 0 8px; }
+    .space-card p { color:var(--muted); line-height:1.55; margin:0 0 16px; }
+    .space-note { margin-top:24px; border:1px solid var(--line); background:var(--surface); border-radius:16px; padding:18px; color:var(--muted); line-height:1.6; }
+    .space-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    #spaceMessage { color:var(--muted); }
+    @media(max-width:600px){ .space-page{padding:32px 18px 60px}.space-grid{grid-template-columns:1fr}.space-heading h1{letter-spacing:-1px} }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">✦ Numelio</a>
+    <nav>
+      <a href="index.html">Inicio</a>
+      <button type="button" id="themeBtn" aria-label="Cambiar tema">☾</button>
+    </nav>
+  </header>
+
+  <main class="space-page">
+    <div class="space-heading">
+      <div>
+        <span class="eyebrow">TU ZONA PERSONAL</span>
+        <h1>Mi espacio</h1>
+        <p class="space-email">Has iniciado sesión como <strong id="userEmail">comprobando cuenta…</strong></p>
+      </div>
+      <div class="space-actions">
+        <a class="btn" href="index.html">Volver a Numelio</a>
+        <button class="btn primary" type="button" id="logoutBtn">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <section class="space-grid" aria-label="Tus materiales de estudio">
+      <article class="space-card">
+        <div class="space-icon">📚</div>
+        <h2>Mis apuntes</h2>
+        <p>En el siguiente paso podrás guardar y organizar tus apuntes por asignatura.</p>
+        <span class="eyebrow">PRÓXIMAMENTE</span>
+      </article>
+      <article class="space-card">
+        <div class="space-icon">📝</div>
+        <h2>Mis exámenes</h2>
+        <p>Prepararemos aquí una biblioteca con tus exámenes y resultados.</p>
+        <span class="eyebrow">PRÓXIMAMENTE</span>
+      </article>
+      <article class="space-card">
+        <div class="space-icon">🗂️</div>
+        <h2>Mis flashcards</h2>
+        <p>Podrás crear tarjetas de memoria y repasarlas cuando quieras.</p>
+        <span class="eyebrow">PRÓXIMAMENTE</span>
+      </article>
+      <article class="space-card">
+        <div class="space-icon">📈</div>
+        <h2>Mi progreso</h2>
+        <p>Más adelante podrás consultar tus puntuaciones y evolución.</p>
+        <span class="eyebrow">PRÓXIMAMENTE</span>
+      </article>
+    </section>
+
+    <p class="space-note" id="spaceMessage" role="status" aria-live="polite">Comprobando tu sesión…</p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase.js"></script>
+  <script>
+    const client = window.numelioSupabase;
+    const userEmail = document.getElementById("userEmail");
+    const spaceMessage = document.getElementById("spaceMessage");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const savedTheme = localStorage.getItem("numelio-theme");
+    if (savedTheme === "dark") document.documentElement.classList.add("dark");
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark");
+      localStorage.setItem("numelio-theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+    });
+
+    async function checkSession() {
+      if (!client) {
+        spaceMessage.textContent = "No se ha podido cargar Supabase. Vuelve a iniciar sesión e inténtalo de nuevo.";
+        return;
+      }
+      const { data, error } = await client.auth.getSession();
+      if (error || !data.session) {
+        window.location.replace("cuenta.html");
+        return;
+      }
+      userEmail.textContent = data.session.user.email || "Usuario";
+      spaceMessage.textContent = "Tu sesión está activa. Estamos preparando las funciones para guardar tus materiales.";
+    }
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+      spaceMessage.textContent = "Cerrando sesión…";
+      const { error } = await client.auth.signOut();
+      if (error) {
+        spaceMessage.textContent = "No se ha podido cerrar sesión. Inténtalo de nuevo.";
+        logoutBtn.disabled = false;
+        return;
+      }
+      window.location.replace("index.html");
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>

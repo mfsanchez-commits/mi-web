@@ -69,6 +69,36 @@ APUNTES:\n${text.slice(0,120000)}`;
   }finally{ if(path) fs.unlink(path,()=>{}); }
 });
 
+app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
+  let path;
+  try{
+    let text="";
+    let visualSource=null;
+    if(req.file){
+      path=req.file.path;
+      const buffer=fs.readFileSync(path);
+      const filename=req.file.originalname.toLowerCase();
+      if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){
+        const data=await pdfParse(buffer); text=(data.text||"").replace(/\\s+/g," ").trim();
+        if(text.length<100) visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:buffer.toString("base64")}};
+      }else if(["image/jpeg","image/png","image/webp"].includes(req.file.mimetype)){
+        visualSource={type:"image",source:{type:"base64",media_type:req.file.mimetype,data:buffer.toString("base64")}};
+      }else if(req.file.mimetype==="text/plain"||filename.endsWith(".txt")) text=buffer.toString("utf8");
+      else return res.status(400).json({error:"Formato no admitido. Usa PDF, TXT, JPG, PNG o WEBP."});
+    }else if(typeof req.body.notesText==="string") text=req.body.notesText;
+    else return res.status(400).json({error:"Añade texto o un archivo."});
+    text=text.replace(/\\s+/g," ").trim();
+    if(!visualSource&&text.length<40)return res.status(400).json({error:"No se ha podido leer suficiente texto de los apuntes."});
+    const prompt=`Crea entre 8 y 20 flashcards educativas en español basadas exclusivamente en estos apuntes. Preguntas claras y respuestas breves pero útiles. Devuelve SOLO JSON válido con esta forma: {"cards":[{"question":"...","answer":"..."}]}. Asignatura: ${req.body.subject||"General"}. Apuntes: ${text.slice(0,90000)}`;
+    const content=visualSource?[{type:"text",text:"Lee la imagen o PDF y crea tarjetas únicamente con información legible. "+prompt},visualSource]:prompt;
+    const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:5000,messages:[{role:"user",content}]});
+    const result=JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||""));
+    if(!Array.isArray(result.cards)||!result.cards.length)throw new Error("La IA no ha devuelto tarjetas válidas.");
+    res.json({cards:result.cards.slice(0,20)});
+  }catch(err){console.error(err);res.status(500).json({error:err?.message?.includes("credit")?"La API no tiene crédito disponible. Comprueba Anthropic.":"No se pudieron generar las tarjetas. Revisa los logs de Render."});}
+  finally{if(path)fs.unlink(path,()=>{});}
+});
+
 app.post("/api/grade-exam", async(req,res)=>{
   try{
     const {subject="General", questions=[], answers=[]}=req.body||{};

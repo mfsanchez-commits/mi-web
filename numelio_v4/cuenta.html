@@ -120,7 +120,10 @@
             "Cuenta creada. Revisa tu correo para confirmar la dirección antes de iniciar sesión.";
         } else {
           message.textContent =
-            mode === "signup" ? "Cuenta creada correctamente." : "¡Has iniciado sesión!";
+            mode === "signup" ? "Cuenta creada correctamente." : "¡Has iniciado sesión! Abriendo tu espacio…";
+          if (result.data.session) {
+            window.location.href = "mi-espacio.html";
+          }
         }
       } catch (error) {
         message.textContent = error.message || "No se ha podido completar la operación.";
@@ -144,7 +147,10 @@
       logoutBtn.hidden = !loggedIn;
       loginBtn.hidden = loggedIn;
       signupBtn.hidden = loggedIn;
-      if (loggedIn) message.textContent = "Sesión iniciada como " + session.user.email;
+      if (loggedIn) {
+        message.textContent = "Sesión iniciada como " + session.user.email + ". Abriendo tu espacio…";
+        window.location.replace("mi-espacio.html");
+      }
     }
 
     if (sb) {

@@ -38,22 +38,28 @@ async function init(){
  if(error||!data.session){location.replace("../cuenta.html");return;}
  userId=data.session.user.id;
  if(!noteId){statusEl.textContent="No se ha indicado qué apunte utilizar.";return;}
- const {data:row,error:readError}=await sb.from("apuntes").select("id,user_id,asignatura,titulo,archivo_nombre,archivo_path,archivo_tipo").eq("id",noteId).eq("user_id",userId).single();
+ const {data:row,error:readError}=await sb.from("apuntes").select("id,user_id,asignatura,titulo,contenido,archivo_nombre,archivo_path,archivo_tipo").eq("id",noteId).eq("user_id",userId).single();
  if(readError||!row){statusEl.textContent="No se ha podido encontrar ese apunte en tu cuenta.";return;}
  note=row;titleEl.textContent=row.titulo;subjectEl.textContent=row.asignatura+" · "+(row.archivo_nombre||"Archivo adjunto");
  const select=document.getElementById("subject");for(const opt of select.options){if(opt.value===row.asignatura)select.value=row.asignatura;}
- if(row.archivo_tipo!=="application/pdf"){statusEl.textContent="La generación automática está disponible por ahora para PDF. El soporte de imágenes llegará después.";return;}
- generateBtn.disabled=false;statusEl.textContent="PDF listo. Pulsa «Generar examen» para leerlo y crear las preguntas.";
+ if(!row.archivo_path && !(row.contenido||"").trim()){statusEl.textContent="Este apunte no tiene texto ni archivo para crear un examen.";return;}
+ generateBtn.disabled=false;statusEl.textContent="Apuntes listos. Pulsa «Generar examen» para crear las preguntas.";
 }
 generateBtn.addEventListener("click",async()=>{
  if(!note||!userId)return;
  generateBtn.disabled=true;generateBtn.textContent="⏳ Leyendo PDF…";statusEl.textContent="Descargando tu PDF privado y extrayendo el texto…";quiz.innerHTML="";
  try{
-  const {data:urlData,error:urlError}=await sb.storage.from("archivos-apuntes").createSignedUrl(note.archivo_path,60);
-  if(urlError)throw urlError;
-  const response=await fetch(urlData.signedUrl);if(!response.ok)throw new Error("No se ha podido descargar el PDF guardado.");
-  const blob=await response.blob();const file=new File([blob],note.archivo_nombre||"apuntes.pdf",{type:"application/pdf"});
-  const fd=new FormData();fd.append("file",file);fd.append("subject",document.getElementById("subject").value);fd.append("count",document.getElementById("count").value);fd.append("difficulty",document.getElementById("difficulty").value);
+  const fd=new FormData();
+  if(note.archivo_path){
+    if((note.archivo_tipo||"").toLowerCase()!=="application/pdf" && !(note.archivo_nombre||"").toLowerCase().endsWith(".pdf")) throw new Error("Por ahora la lectura automática de archivos adjuntos admite PDF. Para imágenes, necesitamos añadir OCR.");
+    const {data:urlData,error:urlError}=await sb.storage.from("archivos-apuntes").createSignedUrl(note.archivo_path,60);
+    if(urlError)throw urlError;
+    const response=await fetch(urlData.signedUrl);if(!response.ok)throw new Error("No se ha podido descargar el PDF guardado.");
+    const blob=await response.blob();const file=new File([blob],note.archivo_nombre||"apuntes.pdf",{type:"application/pdf"});
+    fd.append("file",file);
+  }
+  if((note.contenido||"").trim())fd.append("notesText",note.contenido);
+  fd.append("subject",document.getElementById("subject").value);fd.append("count",document.getElementById("count").value);fd.append("difficulty",document.getElementById("difficulty").value);
   statusEl.textContent="La IA está leyendo tus apuntes y creando las preguntas…";
   const r=await fetch("/api/generate-exam",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||"No se ha podido generar el examen.");
   currentExam=data;renderExam(data);statusEl.textContent="Examen generado a partir de tu PDF. ¡A practicar!";

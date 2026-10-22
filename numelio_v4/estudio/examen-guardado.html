@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Examen desde mis apuntes — Numelio</title><link rel="stylesheet" href="../css/style.css">
+<style>
+.exam-page{max-width:900px;margin:auto;padding:42px 22px 80px}.exam-panel{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:var(--shadow);margin-top:24px}.exam-panel h1{font-size:clamp(32px,5vw,48px);letter-spacing:-1.5px}.exam-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}.exam-options label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}.exam-options select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}#examStatus{color:var(--muted);line-height:1.6;margin-top:16px}.saved-question{border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0;background:var(--surface)}.saved-question label{display:block;padding:8px 0}.saved-question textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}@media(max-width:650px){.exam-options{grid-template-columns:1fr}.exam-page{padding:28px 18px 60px}}
+</style>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="../index.html">✦ Numelio</a><nav><a href="../apuntes.html">Mis apuntes</a><button id="themeBtn" type="button">☾</button></nav></header>
+<main class="exam-page">
+<span class="eyebrow">ZONA DE ESTUDIO · IA</span><h1>Crear examen desde un PDF guardado</h1>
+<p style="color:var(--muted);line-height:1.6">Numelio leerá el PDF que guardaste y preparará preguntas a partir de su contenido.</p>
+<section class="exam-panel">
+<h2 id="noteTitle">Cargando apunte…</h2><p id="noteSubject" style="color:var(--muted)"></p>
+<div class="exam-options">
+<div><label for="count">Número de preguntas</label><select id="count"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></div>
+<div><label for="difficulty">Dificultad</label><select id="difficulty"><option>Fácil</option><option selected>Media</option><option>Difícil</option></select></div>
+<div><label for="subject">Asignatura</label><select id="subject"><option>Matemáticas</option><option>Lengua</option><option>Física y Química</option><option>Biología</option><option>Geografía e Historia</option><option>Francés</option><option>Otra</option></select></div>
+</div>
+<button class="btn primary" id="generateBtn" type="button" disabled>✨ Generar examen</button>
+<div id="examStatus" role="status" aria-live="polite">Comprobando tu sesión…</div><div id="quiz"></div>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../js/supabase.js"></script><script src="../js/app.js"></script>
+<script>
+const sb=window.numelioSupabase;
+const params=new URLSearchParams(location.search);
+const noteId=params.get("id");
+const titleEl=document.getElementById("noteTitle"),subjectEl=document.getElementById("noteSubject"),statusEl=document.getElementById("examStatus"),generateBtn=document.getElementById("generateBtn"),quiz=document.getElementById("quiz");
+let userId=null,note=null,currentExam=null;
+const theme=localStorage.getItem("numelio-theme");if(theme==="dark")document.documentElement.classList.add("dark");
+document.getElementById("themeBtn").addEventListener("click",()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("numelio-theme",document.documentElement.classList.contains("dark")?"dark":"light");});
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function init(){
+ if(!sb){statusEl.textContent="No se ha podido cargar Supabase.";return;}
+ const {data,error}=await sb.auth.getSession();
+ if(error||!data.session){location.replace("../cuenta.html");return;}
+ userId=data.session.user.id;
+ if(!noteId){statusEl.textContent="No se ha indicado qué apunte utilizar.";return;}
+ const {data:row,error:readError}=await sb.from("apuntes").select("id,user_id,asignatura,titulo,archivo_nombre,archivo_path,archivo_tipo").eq("id",noteId).eq("user_id",userId).single();
+ if(readError||!row){statusEl.textContent="No se ha podido encontrar ese apunte en tu cuenta.";return;}
+ note=row;titleEl.textContent=row.titulo;subjectEl.textContent=row.asignatura+" · "+(row.archivo_nombre||"Archivo adjunto");
+ const select=document.getElementById("subject");for(const opt of select.options){if(opt.value===row.asignatura)select.value=row.asignatura;}
+ if(row.archivo_tipo!=="application/pdf"){statusEl.textContent="La generación automática está disponible por ahora para PDF. El soporte de imágenes llegará después.";return;}
+ generateBtn.disabled=false;statusEl.textContent="PDF listo. Pulsa «Generar examen» para leerlo y crear las preguntas.";
+}
+generateBtn.addEventListener("click",async()=>{
+ if(!note||!userId)return;
+ generateBtn.disabled=true;generateBtn.textContent="⏳ Leyendo PDF…";statusEl.textContent="Descargando tu PDF privado y extrayendo el texto…";quiz.innerHTML="";
+ try{
+  const {data:urlData,error:urlError}=await sb.storage.from("archivos-apuntes").createSignedUrl(note.archivo_path,60);
+  if(urlError)throw urlError;
+  const response=await fetch(urlData.signedUrl);if(!response.ok)throw new Error("No se ha podido descargar el PDF guardado.");
+  const blob=await response.blob();const file=new File([blob],note.archivo_nombre||"apuntes.pdf",{type:"application/pdf"});
+  const fd=new FormData();fd.append("file",file);fd.append("subject",document.getElementById("subject").value);fd.append("count",document.getElementById("count").value);fd.append("difficulty",document.getElementById("difficulty").value);
+  statusEl.textContent="La IA está leyendo tus apuntes y creando las preguntas…";
+  const r=await fetch("/api/generate-exam",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||"No se ha podido generar el examen.");
+  currentExam=data;renderExam(data);statusEl.textContent="Examen generado a partir de tu PDF. ¡A practicar!";
+ }catch(e){statusEl.textContent="No se ha podido generar el examen: "+(e.message||"Error desconocido");}
+ finally{generateBtn.disabled=false;generateBtn.textContent="✨ Generar examen";}
+});
+function renderExam(exam){
+ quiz.innerHTML="<h2>"+esc(exam.title||"Examen Numelio")+"</h2><p style='color:var(--muted)'>"+esc(document.getElementById("subject").value)+" · "+exam.questions.length+" preguntas</p>"+exam.questions.map((q,i)=>"<div class='saved-question'><h3>"+(i+1)+". "+esc(q.question)+"</h3>"+(q.type==="choice"?q.options.map((o,j)=>"<label><input type='radio' name='q"+i+"' value='"+j+"'> "+esc(o)+"</label>").join(""):"<textarea id='a"+i+"' rows='4' placeholder='Escribe tu respuesta…'></textarea>")+"</div>").join("")+"<button id='finishBtn' class='btn primary' type='button'>✓ Terminar y corregir</button><div id='score'></div>";
+ document.getElementById("finishBtn").addEventListener("click",grade);
+}
+async function grade(){
+ const answers=currentExam.questions.map((q,i)=>q.type==="choice"?Number(document.querySelector("input[name='q"+i+"']:checked")?.value??-1):document.getElementById("a"+i)?.value||"");
+ const btn=document.getElementById("finishBtn");btn.disabled=true;btn.textContent="Corrigiendo…";
+ try{
+  const r=await fetch("/api/grade-exam",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({subject:document.getElementById("subject").value,questions:currentExam.questions,answers})});
+  const data=await r.json();if(!r.ok)throw new Error(data.error||"Error al corregir");
+  document.getElementById("score").innerHTML="<div class='score'><h2>Nota: "+esc(data.score)+"/10</h2><p>"+esc(data.correct)+"/"+esc(data.total)+" preguntas correctas.</p><p>"+esc(data.summary||"Revisa las correcciones para seguir mejorando.")+"</p><details><summary>Ver correcciones</summary>"+(data.results||[]).map(x=>"<div style='padding:12px 0;border-bottom:1px solid var(--line)'><b>"+(x.correct?"✅ Correcta":"❌ Para revisar")+" · Pregunta "+(Number(x.index)+1)+"</b><p>"+esc(x.feedback)+"</p>"+(x.expected?"<small><b>Respuesta esperada:</b> "+esc(x.expected)+"</small>":"")+"</div>").join("")+"</details></div>";btn.remove();
+ }catch(e){document.getElementById("score").textContent="No se ha podido corregir: "+e.message;btn.disabled=false;btn.textContent="✓ Terminar y corregir";}
+}
+init();
+</script></body></html>

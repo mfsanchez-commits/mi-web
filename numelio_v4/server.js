@@ -21,13 +21,18 @@ function cleanJson(raw){
 app.post("/api/generate-exam", upload.single("file"), async (req,res)=>{
   let path;
   try{
-    if(!req.file) return res.status(400).json({error:"No se ha enviado ningún archivo."});
-    path=req.file.path;
     let text="";
-    if(req.file.mimetype==="application/pdf" || req.file.originalname.toLowerCase().endsWith(".pdf")){
-      const data=await pdfParse(fs.readFileSync(path));
-      text=data.text;
-    } else text=fs.readFileSync(path,"utf8");
+    if(req.file){
+      path=req.file.path;
+      if(req.file.mimetype==="application/pdf" || req.file.originalname.toLowerCase().endsWith(".pdf")){
+        const data=await pdfParse(fs.readFileSync(path));
+        text=data.text;
+      } else text=fs.readFileSync(path,"utf8");
+    } else if(typeof req.body.notesText==="string"){
+      text=req.body.notesText;
+    } else {
+      return res.status(400).json({error:"No se han enviado apuntes ni un archivo."});
+    }
     text=text.replace(/\s+/g," ").trim();
     if(text.length<100) return res.status(400).json({error:"No se ha podido extraer suficiente texto. Si el PDF es escaneado, necesitará OCR."});
 

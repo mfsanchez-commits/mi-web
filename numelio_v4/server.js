@@ -45,7 +45,13 @@ app.use(express.json({limit:"2mb"}));
 
 // No publicar código del servidor, metadatos del proyecto ni scripts internos de Supabase.
 app.use((req, res, next) => {
-  const pathname = req.path || "/";
+  let pathname = req.path || "/";
+  try {
+    pathname = decodeURIComponent(pathname);
+  } catch {
+    return res.sendStatus(400);
+  }
+  pathname = path.posix.normalize("/" + pathname.replace(/^\/+/, ""));
   if (/^\/(?:server\.js|package(?:-lock)?\.json|README\.md|supabase(?:\/|$)|node_modules(?:\/|$)|uploads(?:\/|$))/i.test(pathname)) {
     return res.sendStatus(404);
   }
@@ -86,6 +92,12 @@ async function identifyRequester(req) {
 
 async function checkDailyGenerationLimit(req, res) {
   try {
+    // En producción, no permitir que un fallo de configuración reinicie el límite en memoria.
+    if (process.env.NODE_ENV === "production" &&
+        (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY)) {
+      res.status(503).json({ error: "El control de uso no está configurado. Inténtalo más tarde." });
+      return false;
+    }
     const identity = await identifyRequester(req);
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       const response = await fetch(process.env.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/consume_generation_limit", {

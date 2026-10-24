@@ -43,7 +43,11 @@ app.use(cors({ origin(origin, callback) {
 } }));
 app.use(express.json({limit:"2mb"}));
 
-// No publicar código del servidor, metadatos del proyecto ni scripts internos de Supabase.
+// Publicar solo formatos web esperados y bloquear archivos internos del proyecto.
+const publicStaticExtensions = new Set([
+  ".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".webp", ".gif",
+  ".svg", ".ico", ".woff", ".woff2", ".ttf", ".otf"
+]);
 app.use((req, res, next) => {
   let pathname = req.path || "/";
   try {
@@ -51,10 +55,15 @@ app.use((req, res, next) => {
   } catch {
     return res.sendStatus(400);
   }
-  pathname = path.posix.normalize("/" + pathname.replace(/^\/+/, ""));
-  if (/^\/(?:server\.js|package(?:-lock)?\.json|README\.md|supabase(?:\/|$)|node_modules(?:\/|$)|uploads(?:\/|$))/i.test(pathname)) {
+  if (pathname.includes("\\\\") || pathname.includes("\\0")) return res.sendStatus(400);
+  pathname = path.posix.normalize("/" + pathname.replace(/^\\/+/, ""));
+  if (/^\\/(?:server\\.js|package(?:-lock)?\\.json|README\\.md|supabase(?:\\/|$)|node_modules(?:\\/|$)|uploads(?:\\/|$)|tests?(?:\\/|$)|\.git(?:\\/|$))/i.test(pathname)) {
     return res.sendStatus(404);
   }
+  // Las rutas de API no son archivos estáticos; deben llegar a sus controladores.
+  if (pathname === "/api" || pathname.startsWith("/api/")) return next();
+  const extension = path.posix.extname(pathname).toLowerCase();
+  if (extension && !publicStaticExtensions.has(extension)) return res.sendStatus(404);
   next();
 });
 app.use(express.static(".", { dotfiles: "deny" }));
@@ -288,4 +297,4 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Error interno del servidor." });
 });
 
-app.listen(process.env.PORT||3000,()=>console.log(`Numelio en http://localhost:${process.env.PORT||3000}`));
+const server = app.listen(process.env.PORT || 3000, () => console.log(`Numelio en http://localhost:${server.address().port}`));

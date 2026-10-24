@@ -118,6 +118,7 @@ app.post("/api/generate-exam", upload.single("file"), async (req,res)=>{
     if(req.file){
       path=req.file.path;
       const fileBuffer=fs.readFileSync(path);
+      if (!validFileContent(req.file, fileBuffer)) return res.status(400).json({error:"El contenido del archivo no coincide con su formato."});
       const filename=req.file.originalname.toLowerCase();
       if(req.file.mimetype==="application/pdf" || filename.endsWith(".pdf")){
         const data=await pdfParse(fileBuffer);
@@ -170,6 +171,7 @@ app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
     if(req.file){
       path=req.file.path;
       const buffer=fs.readFileSync(path);
+      if (!validFileContent(req.file, buffer)) return res.status(400).json({error:"El contenido del archivo no coincide con su formato."});
       const filename=req.file.originalname.toLowerCase();
       if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){
         const data=await pdfParse(buffer); text=(data.text||"").replace(/\s+/g," ").trim();

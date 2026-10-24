@@ -106,7 +106,7 @@ app.post("/api/generate-exam", upload.single("file"), async (req,res)=>{
       const filename=req.file.originalname.toLowerCase();
       if(req.file.mimetype==="application/pdf" || filename.endsWith(".pdf")){
         const data=await pdfParse(fileBuffer);
-        text=(data.text||"").replace(/\\s+/g," ").trim();
+        text=(data.text||"").replace(/\s+/g," ").trim();
         if(text.length<100){
           visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:fileBuffer.toString("base64")}};
         }
@@ -122,7 +122,7 @@ app.post("/api/generate-exam", upload.single("file"), async (req,res)=>{
     } else {
       return res.status(400).json({error:"No se han enviado apuntes ni un archivo."});
     }
-    text=text.replace(/\\s+/g," ").trim();
+    text=text.replace(/\s+/g," ").trim();
     if(!visualSource && text.length<100) return res.status(400).json({error:"No se ha podido extraer suficiente texto. Si el archivo es una foto o un PDF escaneado, prueba con una imagen más nítida o un PDF con texto legible."});
 
     const subject=req.body.subject||"General";
@@ -157,7 +157,7 @@ app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
       const buffer=fs.readFileSync(path);
       const filename=req.file.originalname.toLowerCase();
       if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){
-        const data=await pdfParse(buffer); text=(data.text||"").replace(/\\s+/g," ").trim();
+        const data=await pdfParse(buffer); text=(data.text||"").replace(/\s+/g," ").trim();
         if(text.length<100) visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:buffer.toString("base64")}};
       }else if(["image/jpeg","image/png","image/webp"].includes(req.file.mimetype)){
         visualSource={type:"image",source:{type:"base64",media_type:req.file.mimetype,data:buffer.toString("base64")}};
@@ -165,7 +165,7 @@ app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
       else return res.status(400).json({error:"Formato no admitido. Usa PDF, TXT, JPG, PNG o WEBP."});
     }else if(typeof req.body.notesText==="string") text=req.body.notesText;
     else return res.status(400).json({error:"Añade texto o un archivo."});
-    text=text.replace(/\\s+/g," ").trim();
+    text=text.replace(/\s+/g," ").trim();
     if(!visualSource&&text.length<40)return res.status(400).json({error:"No se ha podido leer suficiente texto de los apuntes."});
     const prompt=`Crea entre 8 y 20 flashcards educativas en español basadas exclusivamente en estos apuntes. Preguntas claras y respuestas breves pero útiles. Devuelve SOLO JSON válido con esta forma: {"cards":[{"question":"...","answer":"..."}]}. Asignatura: ${req.body.subject||"General"}. Apuntes: ${text.slice(0,90000)}`;
     const content=visualSource?[{type:"text",text:"Lee la imagen o PDF y crea tarjetas únicamente con información legible. "+prompt},visualSource]:prompt;
@@ -185,13 +185,13 @@ app.post("/api/generate-oral-exam", upload.single("file"), async (req,res)=>{
   let text="", visualSource=null;
   if(req.file){
    path=req.file.path;const buffer=fs.readFileSync(path);const filename=req.file.originalname.toLowerCase();
-   if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){const parsed=await pdfParse(buffer);text=(parsed.text||"").replace(/\\s+/g," ").trim();if(text.length<100)visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:buffer.toString("base64")}};}
+   if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){const parsed=await pdfParse(buffer);text=(parsed.text||"").replace(/\s+/g," ").trim();if(text.length<100)visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:buffer.toString("base64")}};}
    else if(["image/jpeg","image/png","image/webp"].includes(req.file.mimetype))visualSource={type:"image",source:{type:"base64",media_type:req.file.mimetype,data:buffer.toString("base64")}};
    else if(req.file.mimetype==="text/plain"||filename.endsWith(".txt"))text=buffer.toString("utf8");
    else return res.status(400).json({error:"Formato no admitido. Usa PDF, TXT, JPG, PNG o WEBP."});
   } else if(typeof req.body.notesText==="string")text=req.body.notesText;
   else return res.status(400).json({error:"Añade tus apuntes o un archivo."});
-  text=text.replace(/\\s+/g," ").trim();
+  text=text.replace(/\s+/g," ").trim();
   if(!visualSource&&text.length<40)return res.status(400).json({error:"No se ha podido leer suficiente texto de los apuntes."});
   const count=Math.min(Math.max(Number(req.body.count)||5,3),10);
   const prompt=`Prepara un examen oral en español basado EXCLUSIVAMENTE en estos apuntes. Crea ${count} preguntas abiertas, una por una, de dificultad progresiva. Para cada una incluye una respuesta esperada y los conceptos esenciales que debe mencionar el alumno. No uses conocimientos externos ni inventes. Devuelve SOLO JSON válido: {"title":"...","questions":[{"question":"...","expected":"...","keyPoints":["...","..."]}]}. Apuntes: ${text.slice(0,90000)}`;

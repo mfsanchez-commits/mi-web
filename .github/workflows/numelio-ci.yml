@@ -1,0 +1,33 @@
+name: Numelio CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: numelio_v4
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: numelio_v4/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Comprobar sintaxis del servidor
+        run: npm run check
+      - name: Ejecutar pruebas de seguridad y rutas públicas
+        run: npm test

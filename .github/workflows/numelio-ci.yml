@@ -26,7 +26,14 @@ jobs:
           cache: npm
           cache-dependency-path: numelio_v4/package-lock.json
       - name: Instalar dependencias
-        run: npm ci
+        run: npm install
+      - name: Guardar lockfile actualizado para revisión
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: numelio-package-lock
+          path: numelio_v4/package-lock.json
+          if-no-files-found: error
       - name: Revisar vulnerabilidades de dependencias de producción
         run: npm audit --omit=dev --audit-level=high
       - name: Comprobar sintaxis del servidor

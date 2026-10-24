@@ -149,6 +149,7 @@
 
     form.addEventListener("submit", async event => {
       event.preventDefault();
+      if (resetMode) { updatePasswordBtn.click(); return; }
       await authenticate("login");
     });
 

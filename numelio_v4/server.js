@@ -6,8 +6,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import pdfParse from "pdf-parse";
 import fs from "fs";
 import crypto from "crypto";
+import os from "os";
+import path from "path";
 
 const app = express();
+const uploadDir = path.join(os.tmpdir(), "numelio-uploads");
+fs.mkdirSync(uploadDir, { recursive: true });
 const allowedFiles = new Map([
   [".pdf", new Set(["application/pdf"])],
   [".txt", new Set(["text/plain", "application/octet-stream"])],
@@ -17,7 +21,7 @@ const allowedFiles = new Map([
   [".webp", new Set(["image/webp"])]
 ]);
 const upload = multer({
-  dest: "uploads/",
+  dest: uploadDir,
   limits: { fileSize: 10 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
     const ext = file.originalname.slice(file.originalname.lastIndexOf(".")).toLowerCase();
@@ -32,6 +36,17 @@ app.use(express.json({limit:"2mb"}));
 app.use(express.static("."));
 
 const client = new Anthropic({apiKey:process.env.ANTHROPIC_API_KEY});
+
+function validFileContent(file, buffer) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (ext === ".pdf") return buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+  if (ext === ".jpg" || ext === ".jpeg") return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (ext === ".png") return buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  if (ext === ".webp") return buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP";
+  if (ext === ".txt") return !buffer.includes(0);
+  return false;
+}
+
 const DAILY_GENERATION_LIMIT = 10;
 const fallbackUsage = new Map();
 const sha256 = value => crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -184,7 +199,7 @@ app.post("/api/generate-oral-exam", upload.single("file"), async (req,res)=>{
  try{
   let text="", visualSource=null;
   if(req.file){
-   path=req.file.path;const buffer=fs.readFileSync(path);const filename=req.file.originalname.toLowerCase();
+   path=req.file.path;const buffer=fs.readFileSync(path);if(!validFileContent(req.file,buffer))return res.status(400).json({error:"El contenido del archivo no coincide con su formato."});const filename=req.file.originalname.toLowerCase();
    if(req.file.mimetype==="application/pdf"||filename.endsWith(".pdf")){const parsed=await pdfParse(buffer);text=(parsed.text||"").replace(/\s+/g," ").trim();if(text.length<100)visualSource={type:"document",source:{type:"base64",media_type:"application/pdf",data:buffer.toString("base64")}};}
    else if(["image/jpeg","image/png","image/webp"].includes(req.file.mimetype))visualSource={type:"image",source:{type:"base64",media_type:req.file.mimetype,data:buffer.toString("base64")}};
    else if(req.file.mimetype==="text/plain"||filename.endsWith(".txt"))text=buffer.toString("utf8");

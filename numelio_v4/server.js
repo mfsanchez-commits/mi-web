@@ -147,12 +147,16 @@ async function checkDailyGenerationLimit(req, res) {
   }
 }
 
+async function enforceDailyGenerationLimit(req, res, next) {
+  if (!(await checkDailyGenerationLimit(req, res))) return;
+  next();
+}
 
 function cleanJson(raw){
   return raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
 }
 
-app.post("/api/generate-exam", upload.single("file"), async (req,res)=>{
+app.post("/api/generate-exam", enforceDailyGenerationLimit, upload.single("file"), async (req,res)=>{
   let path;
   try{
     let text="";
@@ -194,7 +198,6 @@ APUNTES:\n${text.slice(0,120000)}`;
     const messageContent = visualSource
       ? [{type:"text",text:"Lee con cuidado el contenido de la imagen o del PDF adjunto. Úsalo como fuente exclusiva para crear el examen. Si alguna parte no se puede leer, no inventes información.\\n"+prompt},visualSource]
       : prompt;
-    if (!(await checkDailyGenerationLimit(req,res))) return;
     const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:6000,messages:[{role:"user",content:messageContent}]});
     const raw=msg.content?.find(x=>x.type==="text")?.text||"";
     const exam=JSON.parse(cleanJson(raw));
@@ -205,7 +208,7 @@ APUNTES:\n${text.slice(0,120000)}`;
   }finally{ if(path) fs.unlink(path,()=>{}); }
 });
 
-app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
+app.post("/api/generate-flashcards", enforceDailyGenerationLimit, upload.single("file"), async (req,res)=>{
   let path;
   try{
     let text="";
@@ -228,7 +231,6 @@ app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
     if(!visualSource&&text.length<40)return res.status(400).json({error:"No se ha podido leer suficiente texto de los apuntes."});
     const prompt=`Crea entre 8 y 20 flashcards educativas en español basadas exclusivamente en estos apuntes. Preguntas claras y respuestas breves pero útiles. Devuelve SOLO JSON válido con esta forma: {"cards":[{"question":"...","answer":"..."}]}. Asignatura: ${req.body.subject||"General"}. Apuntes: ${text.slice(0,90000)}`;
     const content=visualSource?[{type:"text",text:"Lee la imagen o PDF y crea tarjetas únicamente con información legible. "+prompt},visualSource]:prompt;
-    if (!(await checkDailyGenerationLimit(req,res))) return;
     const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:5000,messages:[{role:"user",content}]});
     const result=JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||""));
     if(!Array.isArray(result.cards)||!result.cards.length)throw new Error("La IA no ha devuelto tarjetas válidas.");
@@ -238,7 +240,7 @@ app.post("/api/generate-flashcards", upload.single("file"), async (req,res)=>{
 });
 
 
-app.post("/api/generate-oral-exam", upload.single("file"), async (req,res)=>{
+app.post("/api/generate-oral-exam", enforceDailyGenerationLimit, upload.single("file"), async (req,res)=>{
  let path;
  try{
   let text="", visualSource=null;
@@ -255,7 +257,6 @@ app.post("/api/generate-oral-exam", upload.single("file"), async (req,res)=>{
   const count=Math.min(Math.max(Number(req.body.count)||5,3),10);
   const prompt=`Prepara un examen oral en español basado EXCLUSIVAMENTE en estos apuntes. Crea ${count} preguntas abiertas, una por una, de dificultad progresiva. Para cada una incluye una respuesta esperada y los conceptos esenciales que debe mencionar el alumno. No uses conocimientos externos ni inventes. Devuelve SOLO JSON válido: {"title":"...","questions":[{"question":"...","expected":"...","keyPoints":["...","..."]}]}. Apuntes: ${text.slice(0,90000)}`;
   const content=visualSource?[{type:"text",text:"Lee el archivo visual y usa solo información legible. "+prompt},visualSource]:prompt;
-  if (!(await checkDailyGenerationLimit(req,res))) return;
   const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:4500,messages:[{role:"user",content}]});
   const result=JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||""));
   if(!Array.isArray(result.questions)||!result.questions.length)throw new Error("No se han generado preguntas válidas.");
@@ -264,17 +265,16 @@ app.post("/api/generate-oral-exam", upload.single("file"), async (req,res)=>{
  finally{if(path)fs.unlink(path,()=>{});}
 });
 
-app.post("/api/grade-oral-answer", async(req,res)=>{
+app.post("/api/grade-oral-answer", enforceDailyGenerationLimit, async(req,res)=>{
  try{
   const {question,expected,keyPoints,answer}=req.body||{};
   if(!question||!answer?.trim())return res.status(400).json({error:"Falta la pregunta o tu respuesta."});
   const prompt=`Evalúa en español la respuesta oral transcrita del alumno. Usa EXCLUSIVAMENTE la respuesta esperada y puntos clave derivados de sus apuntes. No penalices el estilo oral ni pequeñas muletillas; evalúa precisión, conceptos y omisiones. Nota de 0 a 10. Devuelve SOLO JSON válido: {"score":7,"feedback":"...","missing":["..."],"modelAnswer":"..."}. Pregunta: ${question}\nRespuesta esperada basada en apuntes: ${expected}\nPuntos clave: ${JSON.stringify(keyPoints||[])}\nRespuesta del alumno: ${answer}`;
-  if (!(await checkDailyGenerationLimit(req,res))) return;
   const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:1200,messages:[{role:"user",content:prompt}]});
   res.json(JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||"")));
  }catch(err){console.error(err);res.status(500).json({error:"No se ha podido corregir la respuesta oral."});}
 });
-app.post("/api/grade-exam", async(req,res)=>{
+app.post("/api/grade-exam", enforceDailyGenerationLimit, async(req,res)=>{
   try{
     const {subject="General", questions=[], answers=[]}=req.body||{};
     if(!questions.length) return res.status(400).json({error:"No hay preguntas para corregir."});
@@ -283,7 +283,6 @@ Asignatura: ${subject}.
 Para preguntas tipo test, usa la respuesta indicada en answer (índice). Para respuestas cortas, valora el significado y no exijas que coincida literalmente.
 Devuelve SOLO JSON válido: {"score":8.5,"correct":8,"total":10,"summary":"...","results":[{"index":0,"correct":true,"score":1,"feedback":"...","expected":"..."}]}
 Examen y respuestas:\n${JSON.stringify(questions)}\nRESPUESTAS DEL ALUMNO:\n${JSON.stringify(answers)}`;
-    if (!(await checkDailyGenerationLimit(req,res))) return;
     const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:5000,messages:[{role:"user",content:prompt}]});
     const raw=msg.content?.find(x=>x.type==="text")?.text||"";
     res.json(JSON.parse(cleanJson(raw)));

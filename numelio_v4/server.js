@@ -31,7 +31,15 @@ const upload = multer({
     cb(null, true);
   }
 });
-app.use(cors());
+const allowedOrigins = new Set([
+  "https://mi-web-ej4w.onrender.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+]);
+app.use(cors({ origin(origin, callback) {
+  if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+  return callback(new Error("Origen no permitido."));
+} }));
 app.use(express.json({limit:"2mb"}));
 app.use(express.static("."));
 

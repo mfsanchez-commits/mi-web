@@ -12,3 +12,18 @@ Versión integrada: mantiene la web de Numelio v2 (inicio, calculadoras, diseño
 7. Abre `http://localhost:3000`
 
 La API key debe quedarse en el servidor, nunca en el HTML/JavaScript del navegador.
+
+
+## Variables de entorno para producción
+
+Configura estas variables en el panel de Render (Environment), nunca en archivos versionados:
+
+- `ANTHROPIC_API_KEY`: clave privada de Anthropic.
+- `SUPABASE_URL`: URL del proyecto Supabase.
+- `SUPABASE_PUBLISHABLE_KEY`: clave pública de Supabase para validar sesiones.
+- `SUPABASE_SERVICE_ROLE_KEY`: clave privada de servidor; no debe enviarse al navegador ni publicarse en GitHub.
+- `PORT`: Render lo configura normalmente de forma automática.
+
+Para activar el límite diario persistente de 10 operaciones de IA, ejecuta una vez `supabase/generation_usage.sql` en el SQL Editor de Supabase. Si no se configura la clave de servicio, el servidor utiliza un contador temporal en memoria que se reinicia al reiniciar el proceso; no debe considerarse suficiente para un lanzamiento público.
+
+La clave de Anthropic solo se utiliza en `server.js`. Si alguna clave privada se publicó anteriormente, revócala y genera una nueva.

@@ -210,6 +210,7 @@ app.post("/api/grade-oral-answer", async(req,res)=>{
   const {question,expected,keyPoints,answer}=req.body||{};
   if(!question||!answer?.trim())return res.status(400).json({error:"Falta la pregunta o tu respuesta."});
   const prompt=`Evalúa en español la respuesta oral transcrita del alumno. Usa EXCLUSIVAMENTE la respuesta esperada y puntos clave derivados de sus apuntes. No penalices el estilo oral ni pequeñas muletillas; evalúa precisión, conceptos y omisiones. Nota de 0 a 10. Devuelve SOLO JSON válido: {"score":7,"feedback":"...","missing":["..."],"modelAnswer":"..."}. Pregunta: ${question}\nRespuesta esperada basada en apuntes: ${expected}\nPuntos clave: ${JSON.stringify(keyPoints||[])}\nRespuesta del alumno: ${answer}`;
+  if (!(await checkDailyGenerationLimit(req,res))) return;
   const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:1200,messages:[{role:"user",content:prompt}]});
   res.json(JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||"")));
  }catch(err){console.error(err);res.status(500).json({error:"No se ha podido corregir la respuesta oral."});}

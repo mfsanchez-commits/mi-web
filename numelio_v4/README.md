@@ -27,3 +27,5 @@ Configura estas variables en el panel de Render (Environment), nunca en archivos
 Para activar el límite diario persistente de 10 operaciones de IA, ejecuta una vez `supabase/generation_usage.sql` en el SQL Editor de Supabase. Si no se configura la clave de servicio, el servidor utiliza un contador temporal en memoria que se reinicia al reiniciar el proceso; no debe considerarse suficiente para un lanzamiento público.
 
 La clave de Anthropic solo se utiliza en `server.js`. Si alguna clave privada se publicó anteriormente, revócala y genera una nueva.
+
+En Supabase Auth, añade `https://mi-web-ej4w.onrender.com/cuenta.html?reset=1` a las URL de redirección permitidas para que la recuperación de contraseña pueda volver a Numelio.

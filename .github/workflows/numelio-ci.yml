@@ -27,6 +27,8 @@ jobs:
           cache-dependency-path: numelio_v4/package-lock.json
       - name: Instalar dependencias
         run: npm ci
+      - name: Revisar vulnerabilidades de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
       - name: Comprobar sintaxis del servidor
         run: npm run check
       - name: Ejecutar pruebas de seguridad y rutas públicas

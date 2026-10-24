@@ -42,7 +42,16 @@ app.use(cors({ origin(origin, callback) {
   return callback(new Error("Origen no permitido."));
 } }));
 app.use(express.json({limit:"2mb"}));
-app.use(express.static("."));
+
+// No publicar código del servidor, metadatos del proyecto ni scripts internos de Supabase.
+app.use((req, res, next) => {
+  const pathname = req.path || "/";
+  if (/^\/(?:server\.js|package(?:-lock)?\.json|README\.md|supabase(?:\/|$)|node_modules(?:\/|$)|uploads(?:\/|$))/i.test(pathname)) {
+    return res.sendStatus(404);
+  }
+  next();
+});
+app.use(express.static(".", { dotfiles: "deny" }));
 
 const client = new Anthropic({apiKey:process.env.ANTHROPIC_API_KEY});
 

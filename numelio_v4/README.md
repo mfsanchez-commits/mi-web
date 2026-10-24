@@ -24,7 +24,7 @@ Configura estas variables en el panel de Render (Environment), nunca en archivos
 - `SUPABASE_SERVICE_ROLE_KEY`: clave privada de servidor; no debe enviarse al navegador ni publicarse en GitHub.
 - `PORT`: Render lo configura normalmente de forma automática.
 
-Para activar el límite diario persistente de 10 operaciones de IA, ejecuta una vez `supabase/generation_usage.sql` en el SQL Editor de Supabase. Si no se configura la clave de servicio, el servidor utiliza un contador temporal en memoria que se reinicia al reiniciar el proceso; no debe considerarse suficiente para un lanzamiento público.
+Para activar el límite diario persistente de 10 operaciones de IA, ejecuta una vez `supabase/generation_usage.sql` en el SQL Editor de Supabase. En producción, si falta cualquiera de las variables de Supabase necesarias o la función SQL no está disponible, la API rechaza las operaciones de IA con un error 503 en lugar de recurrir a un contador temporal. En desarrollo se puede usar un contador en memoria, que se reinicia al reiniciar el proceso y no sirve como control de producción.
 
 La clave de Anthropic solo se utiliza en `server.js`. Si alguna clave privada se publicó anteriormente, revócala y genera una nueva.
 

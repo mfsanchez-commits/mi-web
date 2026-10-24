@@ -70,7 +70,7 @@ async function checkDailyGenerationLimit(req, res) {
         return false;
       }
       if (await response.json() !== true) {
-        res.status(429).json({ error: "Has alcanzado el límite de 10 generaciones al día. Vuelve mañana para seguir creando contenido." });
+        res.status(429).json({ error: "Has alcanzado el límite de 10 operaciones de IA al día. Vuelve mañana para seguir estudiando." });
         return false;
       }
       return true;
@@ -79,7 +79,7 @@ async function checkDailyGenerationLimit(req, res) {
     const key = (identity.userId ? "user:" + identity.userId : "ip:" + identity.ipHash) + ":" + utcDay;
     const used = fallbackUsage.get(key) || 0;
     if (used >= DAILY_GENERATION_LIMIT) {
-      res.status(429).json({ error: "Has alcanzado el límite de 10 generaciones al día. Vuelve mañana para seguir creando contenido." });
+      res.status(429).json({ error: "Has alcanzado el límite de 10 operaciones de IA al día. Vuelve mañana para seguir estudiando." });
       return false;
     }
     fallbackUsage.set(key, used + 1);
@@ -223,6 +223,7 @@ Asignatura: ${subject}.
 Para preguntas tipo test, usa la respuesta indicada en answer (índice). Para respuestas cortas, valora el significado y no exijas que coincida literalmente.
 Devuelve SOLO JSON válido: {"score":8.5,"correct":8,"total":10,"summary":"...","results":[{"index":0,"correct":true,"score":1,"feedback":"...","expected":"..."}]}
 Examen y respuestas:\n${JSON.stringify(questions)}\nRESPUESTAS DEL ALUMNO:\n${JSON.stringify(answers)}`;
+    if (!(await checkDailyGenerationLimit(req,res))) return;
     const msg=await client.messages.create({model:"claude-sonnet-5-5",max_tokens:5000,messages:[{role:"user",content:prompt}]});
     const raw=msg.content?.find(x=>x.type==="text")?.text||"";
     res.json(JSON.parse(cleanJson(raw)));

@@ -206,7 +206,9 @@
       logoutBtn.hidden = !loggedIn;
       loginBtn.hidden = loggedIn;
       signupBtn.hidden = loggedIn;
-      if (loggedIn) {
+      if (loggedIn && resetMode) {
+        message.textContent = "Sesión de recuperación activa. Escribe tu nueva contraseña y guárdala.";
+      } else if (loggedIn) {
         message.textContent = "Sesión iniciada como " + session.user.email + ". Abriendo tu espacio…";
         window.location.replace("mi-espacio.html");
       }

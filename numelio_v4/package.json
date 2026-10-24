@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
-    "@supabase/supabase-js": "^2.57.0",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "pdf-parse": "^1.1.1",

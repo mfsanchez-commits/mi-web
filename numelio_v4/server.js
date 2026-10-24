@@ -48,6 +48,10 @@ const publicStaticExtensions = new Set([
   ".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".webp", ".gif",
   ".svg", ".ico", ".woff", ".woff2", ".ttf", ".otf"
 ]);
+const blockedPublicSegments = new Set([
+  "server.js", "package.json", "package-lock.json", "readme.md",
+  "supabase", "node_modules", "uploads", "test", "tests", ".git"
+]);
 app.use((req, res, next) => {
   let pathname = req.path || "/";
   try {
@@ -55,15 +59,14 @@ app.use((req, res, next) => {
   } catch {
     return res.sendStatus(400);
   }
-  if (pathname.includes("\\\\") || pathname.includes("\\0")) return res.sendStatus(400);
-  pathname = path.posix.normalize("/" + pathname.replace(/^\\/+/, ""));
-  if (/^\\/(?:server\\.js|package(?:-lock)?\\.json|README\\.md|supabase(?:\\/|$)|node_modules(?:\\/|$)|uploads(?:\\/|$)|tests?(?:\\/|$)|\.git(?:\\/|$))/i.test(pathname)) {
-    return res.sendStatus(404);
-  }
+  if (pathname.includes("\\") || pathname.includes("\0")) return res.sendStatus(400);
+  pathname = path.posix.normalize("/" + pathname.replace(/^\/+/, ""));
+  const segments = pathname.split("/").filter(Boolean).map(segment => segment.toLowerCase());
+  if (segments.some(segment => blockedPublicSegments.has(segment))) return res.sendStatus(404);
   // Las rutas de API no son archivos estáticos; deben llegar a sus controladores.
   if (pathname === "/api" || pathname.startsWith("/api/")) return next();
   const extension = path.posix.extname(pathname).toLowerCase();
-  if (extension && !publicStaticExtensions.has(extension)) return res.sendStatus(404);
+  if (pathname !== "/" && (!extension || !publicStaticExtensions.has(extension))) return res.sendStatus(404);
   next();
 });
 app.use(express.static(".", { dotfiles: "deny" }));

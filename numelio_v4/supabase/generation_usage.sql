@@ -21,7 +21,15 @@ set search_path = public
 as $$
 declare used_count integer;
 begin
-  perform pg_advisory_xact_lock(hashtext(coalesce(p_user_id::text, p_ip_hash)));
+  if p_daily_limit is null or p_daily_limit < 1 then
+    raise exception 'p_daily_limit must be a positive integer';
+  end if;
+  if p_user_id is null and coalesce(p_ip_hash, '') = '' then
+    raise exception 'p_ip_hash is required for anonymous usage';
+  end if;
+
+  -- 64-bit advisory key reduces collisions between unrelated users/IP hashes.
+  perform pg_advisory_xact_lock(hashtextextended(coalesce(p_user_id::text, p_ip_hash), 0));
   if p_user_id is not null then
     select count(*) into used_count from public.generation_usage
       where user_id = p_user_id and created_at >= date_trunc('day', now() at time zone 'utc') at time zone 'utc';

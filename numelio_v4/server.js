@@ -10,6 +10,7 @@ import os from "os";
 import path from "path";
 
 const app = express();
+app.set("trust proxy", 1);
 const uploadDir = path.join(os.tmpdir(), "numelio-uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
 const allowedFiles = new Map([

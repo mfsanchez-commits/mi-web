@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   checks:
@@ -27,6 +27,19 @@ jobs:
           cache-dependency-path: numelio_v4/package-lock.json
       - name: Instalar dependencias
         run: npm install
+      - name: Guardar lockfile actualizado en la rama de trabajo
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BRANCH: ${{ github.head_ref }}
+        run: |
+          if ! git diff --quiet -- numelio_v4/package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add numelio_v4/package-lock.json
+            git commit -m "Actualizar lockfile de dependencias"
+            git push origin "HEAD:$PR_BRANCH"
+          fi
       - name: Guardar lockfile actualizado para revisión
         if: always()
         uses: actions/upload-artifact@v4

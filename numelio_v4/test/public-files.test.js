@@ -23,7 +23,7 @@ before(async () => {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      NODE_ENV: "test",
+      NODE_ENV: "production",
       PORT: String(port),
       ANTHROPIC_API_KEY: "test-key-not-valid",
       SUPABASE_URL: "",
@@ -83,6 +83,17 @@ test("los archivos internos del proyecto no son públicos", async () => {
     const response = await fetch(baseUrl + path);
     assert.equal(response.status, 404, path + " debería estar bloqueado");
   }
+});
+
+test("la API falla de forma segura si falta la configuración del límite de IA en producción", async () => {
+  const response = await fetch(baseUrl + "/api/grade-exam", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ questions: [{ question: "2+2?", answer: "4" }], answers: ["4"] })
+  });
+  assert.equal(response.status, 503);
+  const data = await response.json();
+  assert.match(data.error, /control de uso no está configurado/i);
 });
 
 test("las rutas codificadas a archivos internos tampoco son públicas", async () => {

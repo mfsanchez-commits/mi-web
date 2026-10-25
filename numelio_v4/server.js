@@ -419,16 +419,16 @@ app.post("/api/tutor-chat", requireTutorAccount, enforceDailyGenerationLimit, up
       const filename = req.file.originalname.toLowerCase();
       if (req.file.mimetype === "application/pdf" || filename.endsWith(".pdf")) {
         const parsed = await pdfParse(buffer);
-        const extracted = (parsed.text || "").replace(/\\s+/g, " ").trim();
+        const extracted = (parsed.text || "").replace(/\s+/g, " ").trim();
         if (extracted.length >= 100) {
-          studyContext = (studyContext + "\\n\\nTexto extraído del PDF adjunto:\\n" + extracted).trim();
+          studyContext = (studyContext + "\n\nTexto extraído del PDF adjunto:\n" + extracted).trim();
         } else {
           visualSource = { type: "document", source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") } };
         }
       } else if (["image/jpeg", "image/png", "image/webp"].includes(req.file.mimetype)) {
         visualSource = { type: "image", source: { type: "base64", media_type: req.file.mimetype, data: buffer.toString("base64") } };
       } else if (req.file.mimetype === "text/plain" || filename.endsWith(".txt")) {
-        studyContext = (studyContext + "\\n\\nTexto del archivo adjunto:\\n" + buffer.toString("utf8")).trim();
+        studyContext = (studyContext + "\n\nTexto del archivo adjunto:\n" + buffer.toString("utf8")).trim();
       } else {
         return res.status(400).json({ error: "Formato no admitido. Usa PDF, TXT, JPG, PNG o WEBP." });
       }
@@ -459,7 +459,7 @@ app.post("/api/tutor-chat", requireTutorAccount, enforceDailyGenerationLimit, up
     if (visualSource) {
       const last = safeMessages[safeMessages.length - 1];
       last.content = [
-        { type: "text", text: last.content + "\\n\\nEl alumno ha adjuntado un archivo. Analiza solo la información legible y no inventes contenido." },
+        { type: "text", text: last.content + "\n\nEl alumno ha adjuntado un archivo. Analiza solo la información legible y no inventes contenido." },
         visualSource
       ];
     }

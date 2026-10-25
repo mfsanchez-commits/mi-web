@@ -17,7 +17,7 @@
     <a href="estudio/examen.html">Practicar</a>
     <a href="#herramientas">Herramientas</a>
     <button id="themeBtn" type="button" aria-label="Cambiar tema" title="Cambiar tema">☾</button>
-    <a href="cuenta.html" class="login-link">Mi espacio / Entrar</a>
+    <a href="cuenta.html" class="login-link" id="accountLink">Mi espacio / Entrar</a>
   </nav>
 </header>
 
@@ -118,6 +118,23 @@
 <script src="js/supabase.js"></script>
 <script src="js/app.js"></script>
 <script>
+  const accountLink = document.getElementById("accountLink");
+  async function updateAccountLink() {
+    const client = window.numelioSupabase;
+    if (!client || !accountLink) return;
+    try {
+      const { data } = await client.auth.getSession();
+      const signedIn = Boolean(data.session);
+      accountLink.href = signedIn ? "mi-espacio.html" : "cuenta.html";
+      accountLink.textContent = signedIn ? "Mi espacio →" : "Mi espacio / Entrar";
+    } catch {
+      accountLink.href = "cuenta.html";
+      accountLink.textContent = "Mi espacio / Entrar";
+    }
+  }
+  updateAccountLink();
+  window.numelioSupabase?.auth.onAuthStateChange(() => updateAccountLink());
+
   const searchInput = document.getElementById("search");
   const noResults = document.getElementById("noResults");
   searchInput?.addEventListener("input", () => {

@@ -66,6 +66,12 @@ test("la portada y los recursos públicos se sirven", async () => {
   }
 });
 
+test("la comprobación de salud responde sin exponer configuración", async () => {
+  const response = await fetch(baseUrl + "/health");
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok" });
+});
+
 test("los archivos internos del proyecto no son públicos", async () => {
   for (const path of [
     "/server.js",

@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 
 const htmlPath = path.join(process.cwd(), "matematicas", "descuentos.html");
 const html = fs.readFileSync(htmlPath, "utf8");
-const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script\\s*>/gi)]
-  .filter(match => !/\\bsrc\\s*=/.test(match[1]) && match[2].trim());
+const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)]
+  .filter(match => !/\bsrc\s*=/.test(match[1]) && match[2].trim());
 const calculatorScript = scripts.at(-1)?.[2];
 
 assert.ok(calculatorScript, "La calculadora debe tener un script JavaScript incrustado");
@@ -28,18 +28,18 @@ function runCalculator(price, discount) {
 test("calcula correctamente un descuento y el ahorro", () => {
   const result = runCalculator("100", "20");
   assert.equal(result.hidden, false);
-  assert.match(result.innerHTML, /80\\.00 €/);
-  assert.match(result.innerHTML, /Ahorras 20\\.00 €/);
+  assert.match(result.innerHTML, /80\.00 €/);
+  assert.match(result.innerHTML, /Ahorras 20\.00 €/);
 });
 
 test("acepta decimales con coma y con punto", () => {
-  assert.match(runCalculator("12,50", "10").innerHTML, /11\\.25 €/);
-  assert.match(runCalculator("12.50", "10").innerHTML, /11\\.25 €/);
+  assert.match(runCalculator("12,50", "10").innerHTML, /11\.25 €/);
+  assert.match(runCalculator("12.50", "10").innerHTML, /11\.25 €/);
 });
 
 test("acepta descuentos de 0 % y 100 %", () => {
-  assert.match(runCalculator("50", "0").innerHTML, /50\\.00 €/);
-  assert.match(runCalculator("50", "100").innerHTML, /0\\.00 €/);
+  assert.match(runCalculator("50", "0").innerHTML, /50\.00 €/);
+  assert.match(runCalculator("50", "100").innerHTML, /0\.00 €/);
 });
 
 test("rechaza precios negativos y descuentos fuera del rango", () => {

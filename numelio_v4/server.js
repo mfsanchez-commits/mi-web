@@ -10,7 +10,18 @@ import os from "os";
 import path from "path";
 
 const app = express();
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
+
+// Cabeceras de seguridad compatibles con los recursos actuales de la web.
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), geolocation=(), payment=()");
+  if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
 const uploadDir = path.join(os.tmpdir(), "numelio-uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
 const allowedFiles = new Map([

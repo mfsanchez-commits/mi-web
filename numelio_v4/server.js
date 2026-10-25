@@ -153,7 +153,7 @@ async function enforceDailyGenerationLimit(req, res, next) {
 }
 
 function cleanJson(raw){
-  return raw.replace(/^\`\`\`json\\s*/i,"").replace(/^\`\`\`\\s*/i,"").replace(/\\s*\`\`\`$/i,"").trim();
+  return raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
 }
 
 function validateGradeOralRequest(req, res, next) {

@@ -1,34 +1,51 @@
 <!doctype html>
 <html lang="es">
 <head>
-<link rel="canonical" href="https://mi-web-ej4w.onrender.com/mi-espacio.html">
+  <link rel="canonical" href="https://mi-web-ej4w.onrender.com/mi-espacio.html">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tu espacio personal de estudio en Numelio: apuntes, tarjetas y herramientas para practicar.">
   <title>Mi espacio — Numelio</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    .space-page { max-width: 1050px; margin: auto; padding: 48px 22px 80px; }
-    .space-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:28px; }
-    .space-heading h1 { font-size:clamp(32px,5vw,48px); letter-spacing:-1.5px; margin:10px 0; }
-    .space-email { color:var(--muted); overflow-wrap:anywhere; }
-    .space-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
-    .space-card { background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:24px; box-shadow:var(--shadow); }
-    .space-card .space-icon { font-size:28px; }
-    .space-card h2 { font-size:21px; margin:12px 0 8px; }
-    .space-card p { color:var(--muted); line-height:1.55; margin:0 0 16px; }
-    .space-note { margin-top:24px; border:1px solid var(--line); background:var(--surface); border-radius:16px; padding:18px; color:var(--muted); line-height:1.6; }
-    .space-actions { display:flex; gap:10px; flex-wrap:wrap; }
-    #spaceMessage { color:var(--muted); }
-    @media(max-width:600px){ .space-page{padding:32px 18px 60px}.space-grid{grid-template-columns:1fr}.space-heading h1{letter-spacing:-1px} }
+    .space-page{max-width:1100px;margin:auto;padding:42px 22px 80px}
+    .space-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+    .space-heading h1{font-size:clamp(32px,5vw,48px);letter-spacing:-1.5px;margin:10px 0}
+    .space-email{color:var(--muted);overflow-wrap:anywhere}
+    .space-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .space-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:24px 0}
+    .space-stat,.space-card,.subject-panel,.recent-panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);min-width:0}
+    .space-stat span{display:block;color:var(--muted);font-size:13px}
+    .space-stat strong{display:block;font-size:30px;letter-spacing:-1px;margin-top:5px}
+    .space-section-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin:34px 0 16px}
+    .space-section-heading h2{margin:5px 0;font-size:24px}
+    .space-section-heading p,.space-card p{color:var(--muted);line-height:1.55}
+    .subject-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .subject-row{border:1px solid var(--line);border-radius:12px;padding:13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .subject-row strong{overflow-wrap:anywhere}
+    .subject-row small{display:block;color:var(--muted);margin-top:4px}
+    .subject-counts{white-space:nowrap;text-align:right;color:var(--muted);font-size:12px}
+    .space-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .space-card .space-icon{font-size:26px}
+    .space-card h3{font-size:19px;margin:10px 0 7px}
+    .space-card p{margin:0 0 16px;font-size:14px}
+    .space-card .eyebrow{display:inline-block;margin-top:4px}
+    .recent-list{display:grid;gap:8px}
+    .recent-item{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+    .recent-item:last-child{border-bottom:0}
+    .recent-item strong{display:block;overflow-wrap:anywhere}
+    .recent-item small{display:block;color:var(--muted);margin-top:4px}
+    .recent-item a{white-space:nowrap}
+    #spaceMessage{color:var(--muted);line-height:1.55;margin-top:18px}
+    .space-note{font-size:13px;color:var(--muted);line-height:1.6;margin-top:20px}
+    @media(max-width:800px){.space-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){.space-page{padding:30px 16px 55px}.space-stats{grid-template-columns:1fr 1fr}.space-stat:last-child{grid-column:1/-1}.subject-list,.space-grid{grid-template-columns:1fr}.space-heading h1{letter-spacing:-1px}.recent-item{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="index.html">✦ Numelio</a>
-    <nav>
-      <a href="index.html">Inicio</a>
-      <button type="button" id="themeBtn" aria-label="Cambiar tema">☾</button>
-    </nav>
+    <nav aria-label="Navegación principal"><a href="index.html">Inicio</a><button type="button" id="themeBtn" aria-label="Cambiar tema">☾</button></nav>
   </header>
 
   <main class="space-page">
@@ -36,7 +53,7 @@
       <div>
         <span class="eyebrow">TU ZONA PERSONAL</span>
         <h1>Mi espacio</h1>
-        <p class="space-email">Has iniciado sesión como <strong id="userEmail">comprobando cuenta…</strong></p>
+        <p class="space-email">Sesión iniciada como <strong id="userEmail">Comprobando cuenta…</strong></p>
       </div>
       <div class="space-actions">
         <a class="btn" href="index.html">Volver a Numelio</a>
@@ -44,43 +61,39 @@
       </div>
     </div>
 
-    <section class="space-grid" aria-label="Tus materiales de estudio">
-      <article class="space-card">
-        <div class="space-icon">📚</div>
-        <h2>Mis apuntes</h2>
-        <p>Guarda, edita y organiza tus apuntes por asignatura.</p>
-        <a class="btn primary" href="apuntes.html">Abrir mis apuntes →</a>
-      </article>
-      <article class="space-card">
-        <div class="space-icon">📝</div>
-        <h2>Mis exámenes</h2>
-        <p>Prepararemos aquí una biblioteca con tus exámenes y resultados.</p>
-        <span class="eyebrow">PRÓXIMAMENTE</span>
-      </article>
-      <article class="space-card">
-        <div class="space-icon">💬</div>
-        <h2>Profesor IA</h2>
-        <p>Pregunta dudas de cualquier asignatura, lee las respuestas y usa el micrófono para hablar.</p>
-        <a class="btn primary" href="profesor.html">Abrir el profesor →</a>
-      </article>
-      <article class="space-card">
-        <div class="space-icon">🎙️</div>
-        <h2>Examen oral</h2>
-        <p>Practica hablando: la IA te pregunta sobre tus apuntes y corrige cada respuesta.</p>
-        <a class="btn primary" href="examen-oral.html">Empezar examen oral →</a>
-      </article>
-      <article class="space-card">
-        <div class="space-icon">🗂️</div>
-        <h2>Mis flashcards</h2>
-        <p>Podrás crear tarjetas de memoria y repasarlas cuando quieras.</p>
-        <a class="btn primary" href="flashcards.html">Crear y repasar tarjetas →</a>
-      </article>
-      <article class="space-card">
-        <div class="space-icon">📈</div>
-        <h2>Mi progreso</h2>
-        <p>Más adelante podrás consultar tus puntuaciones y evolución.</p>
-        <span class="eyebrow">PRÓXIMAMENTE</span>
-      </article>
+    <section aria-labelledby="summaryTitle">
+      <div class="space-section-heading">
+        <div><span class="eyebrow">RESUMEN</span><h2 id="summaryTitle">Tu material de estudio</h2><p>Contadores reales de los materiales que tienes guardados.</p></div>
+      </div>
+      <div class="space-stats">
+        <article class="space-stat"><span>Apuntes guardados</span><strong id="notesTotal">—</strong></article>
+        <article class="space-stat"><span>Conjuntos de tarjetas</span><strong id="setsTotal">—</strong></article>
+        <article class="space-stat"><span>Tarjetas para repasar</span><strong id="cardsTotal">—</strong></article>
+      </div>
+    </section>
+
+    <section class="subject-panel" aria-labelledby="subjectsTitle">
+      <div class="space-section-heading" style="margin-top:0">
+        <div><span class="eyebrow">POR ASIGNATURA</span><h2 id="subjectsTitle">Tu organización</h2><p>Consulta de un vistazo cuántos apuntes y tarjetas tienes en cada materia.</p></div>
+      </div>
+      <div id="subjectList" class="subject-list"><p>Consultando tus materiales…</p></div>
+    </section>
+
+    <section aria-labelledby="toolsTitle">
+      <div class="space-section-heading"><div><span class="eyebrow">ACCESOS RÁPIDOS</span><h2 id="toolsTitle">Continúa estudiando</h2><p>Entra directamente en la herramienta que necesitas.</p></div></div>
+      <div class="space-grid">
+        <article class="space-card"><div class="space-icon">📚</div><h3>Mis apuntes</h3><p>Guarda, edita y organiza texto, PDF o fotos por asignatura.</p><a class="btn primary" href="apuntes.html">Abrir mis apuntes →</a></article>
+        <article class="space-card"><div class="space-icon">🗂️</div><h3>Mis flashcards</h3><p>Genera tarjetas a partir de apuntes y repásalas cuando quieras.</p><a class="btn primary" href="flashcards.html">Crear y repasar →</a></article>
+        <article class="space-card"><div class="space-icon">💬</div><h3>Profesor IA</h3><p>Pregunta dudas, pide ejemplos y trabaja con apuntes o archivos adjuntos.</p><a class="btn primary" href="profesor.html">Preguntar al profesor →</a></article>
+        <article class="space-card"><div class="space-icon">📝</div><h3>Crear examen</h3><p>Genera y corrige un examen con tus apuntes o archivos.</p><a class="btn primary" href="estudio/examen.html">Preparar examen →</a></article>
+        <article class="space-card"><div class="space-icon">🎙️</div><h3>Examen oral</h3><p>Practica hablando y comprueba cómo explicas lo que has estudiado.</p><a class="btn primary" href="examen-oral.html">Empezar examen oral →</a></article>
+        <article class="space-card"><div class="space-icon">📈</div><h3>Resultados y progreso</h3><p>El historial de notas de los exámenes aún no está implementado; no mostraremos estadísticas inventadas.</p><span class="eyebrow">PENDIENTE</span></article>
+      </div>
+    </section>
+
+    <section class="recent-panel" aria-labelledby="recentTitle" style="margin-top:24px">
+      <div class="space-section-heading" style="margin-top:0"><div><span class="eyebrow">ÚLTIMOS GUARDADOS</span><h2 id="recentTitle">Tus apuntes recientes</h2></div><a class="btn" href="apuntes.html">Ver todos →</a></div>
+      <div id="recentNotes" class="recent-list"><p>Consultando tus apuntes…</p></div>
     </section>
 
     <p class="space-note" id="spaceMessage" role="status" aria-live="polite">Comprobando tu sesión…</p>
@@ -93,6 +106,7 @@
     const userEmail = document.getElementById("userEmail");
     const spaceMessage = document.getElementById("spaceMessage");
     const logoutBtn = document.getElementById("logoutBtn");
+    const subjectNames = ["Matemáticas","Lengua","Física y Química","Biología","Geografía e Historia","Francés","Deporte","Religión","General","Otra"];
     const savedTheme = localStorage.getItem("numelio-theme");
     if (savedTheme === "dark") document.documentElement.classList.add("dark");
     document.getElementById("themeBtn").addEventListener("click", () => {
@@ -100,9 +114,83 @@
       localStorage.setItem("numelio-theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
     });
 
+    function addText(tag, text, className) {
+      const node = document.createElement(tag);
+      node.textContent = text;
+      if (className) node.className = className;
+      return node;
+    }
+
+    function renderSubjects(notes, sets) {
+      const counts = new Map(subjectNames.map(name => [name, {notes:0,sets:0,cards:0}]));
+      for (const note of notes) {
+        const key = counts.has(note.asignatura) ? note.asignatura : "Otra";
+        counts.get(key).notes++;
+      }
+      for (const set of sets) {
+        const key = counts.has(set.asignatura) ? set.asignatura : "Otra";
+        counts.get(key).sets++;
+        counts.get(key).cards += Array.isArray(set.tarjetas) ? set.tarjetas.length : 0;
+      }
+      const list = document.getElementById("subjectList");
+      list.replaceChildren();
+      for (const [name, count] of counts) {
+        if (!count.notes && !count.sets) continue;
+        const row = document.createElement("div");
+        row.className = "subject-row";
+        const title = document.createElement("div");
+        title.append(addText("strong", name), addText("small", count.notes + (count.notes === 1 ? " apunte" : " apuntes")));
+        const right = addText("div", count.sets + (count.sets === 1 ? " conjunto" : " conjuntos") + " · " + count.cards + (count.cards === 1 ? " tarjeta" : " tarjetas"), "subject-counts");
+        row.append(title, right);
+        list.append(row);
+      }
+      if (!list.children.length) list.append(addText("p", "Todavía no tienes materiales guardados. Crea un apunte o genera tus primeras tarjetas."));
+    }
+
+    function renderRecent(notes) {
+      const list = document.getElementById("recentNotes");
+      list.replaceChildren();
+      if (!notes.length) {
+        list.append(addText("p", "Aún no has guardado apuntes. Puedes crear el primero en «Mis apuntes»."));
+        return;
+      }
+      for (const note of notes) {
+        const row = document.createElement("div");
+        row.className = "recent-item";
+        const info = document.createElement("div");
+        info.append(addText("strong", note.titulo || "Apunte sin título"), addText("small", (note.asignatura || "General") + (note.updated_at ? " · Actualizado " + new Date(note.updated_at).toLocaleDateString("es-ES") : "")));
+        const link = document.createElement("a");
+        link.href = "apuntes.html";
+        link.className = "btn";
+        link.textContent = "Abrir apuntes";
+        row.append(info, link);
+        list.append(row);
+      }
+    }
+
+    async function loadDashboard(userId) {
+      const [notesResult, setsResult] = await Promise.all([
+        client.from("apuntes").select("id,asignatura,titulo,updated_at").eq("user_id", userId).order("updated_at", {ascending:false}),
+        client.from("flashcards").select("id,asignatura,tarjetas,created_at").eq("user_id", userId).order("created_at", {ascending:false})
+      ]);
+      if (notesResult.error || setsResult.error) {
+        spaceMessage.textContent = "Tu sesión está activa, pero no se han podido cargar todos los materiales. Revisa que las tablas de apuntes y flashcards estén configuradas en Supabase.";
+        document.getElementById("subjectList").replaceChildren(addText("p", "No se ha podido cargar el resumen por asignatura."));
+        return;
+      }
+      const notes = notesResult.data || [];
+      const sets = setsResult.data || [];
+      document.getElementById("notesTotal").textContent = notes.length;
+      document.getElementById("setsTotal").textContent = sets.length;
+      document.getElementById("cardsTotal").textContent = sets.reduce((total, set) => total + (Array.isArray(set.tarjetas) ? set.tarjetas.length : 0), 0);
+      renderSubjects(notes, sets);
+      renderRecent(notes.slice(0, 5));
+      spaceMessage.textContent = "Sesión activa. El resumen muestra los apuntes y las tarjetas que tienes guardados; los resultados históricos de exámenes aún están pendientes.";
+    }
+
     async function checkSession() {
       if (!client) {
-        spaceMessage.textContent = "No se ha podido cargar Supabase. Vuelve a iniciar sesión e inténtalo de nuevo.";
+        spaceMessage.textContent = "No se ha podido cargar Supabase. Recarga la página e inténtalo de nuevo.";
         return;
       }
       const { data, error } = await client.auth.getSession();
@@ -111,12 +199,13 @@
         return;
       }
       userEmail.textContent = data.session.user.email || "Usuario";
-      spaceMessage.textContent = "Tu sesión está activa. Ya puedes guardar tus apuntes por asignatura.";
+      await loadDashboard(data.session.user.id);
     }
 
     logoutBtn.addEventListener("click", async () => {
       logoutBtn.disabled = true;
       spaceMessage.textContent = "Cerrando sesión…";
+      if (!client) { logoutBtn.disabled = false; return; }
       const { error } = await client.auth.signOut();
       if (error) {
         spaceMessage.textContent = "No se ha podido cerrar sesión. Inténtalo de nuevo.";
@@ -128,6 +217,6 @@
 
     checkSession();
   </script>
-<footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
+  <footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
 </body>
 </html>

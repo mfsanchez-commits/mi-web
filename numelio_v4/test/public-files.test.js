@@ -146,3 +146,54 @@ test("las rutas codificadas a archivos internos tampoco son públicas", async ()
     assert.equal(response.status, 404, path + " debería estar bloqueado");
   }
 });
+
+
+test("la corrección escrita rechaza respuestas que no corresponden a las preguntas", async () => {
+  const response = await fetch(baseUrl + "/api/grade-exam", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      questions: [{ type: "choice", question: "2+2?", options: ["1", "2", "3", "4"], answer: 3 }],
+      answers: []
+    })
+  });
+  assert.equal(response.status, 400);
+  const data = await response.json();
+  assert.match(data.error, /una respuesta por pregunta/i);
+});
+
+test("la corrección escrita rechaza índices de respuesta fuera de rango", async () => {
+  const response = await fetch(baseUrl + "/api/grade-exam", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      questions: [{ type: "choice", question: "2+2?", options: ["1", "2", "3", "4"], answer: 4 }],
+      answers: [4]
+    })
+  });
+  assert.equal(response.status, 400);
+  const data = await response.json();
+  assert.match(data.error, /datos no válidos/i);
+});
+
+test("la corrección oral rechaza criterios de evaluación con tipos incorrectos", async () => {
+  const response = await fetch(baseUrl + "/api/grade-oral-answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: "Explica la fotosíntesis", answer: "Proceso vegetal", keyPoints: "no es una lista" })
+  });
+  assert.equal(response.status, 400);
+  const data = await response.json();
+  assert.match(data.error, /formato válido|superan el límite/i);
+});
+
+test("la API de tutoría exige una sesión de usuario", async () => {
+  const response = await fetch(baseUrl + "/api/tutor-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "Hola" })
+  });
+  assert.equal(response.status, 401);
+  const data = await response.json();
+  assert.match(data.error, /inicia sesión|cuenta/i);
+});

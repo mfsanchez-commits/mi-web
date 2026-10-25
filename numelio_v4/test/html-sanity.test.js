@@ -6,18 +6,18 @@ import assert from "node:assert/strict";
 
 const root = process.cwd();
 
-function listHtml(directory) {
+function listFiles(directory, extension) {
   const files = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (entry.name === "node_modules" || entry.name === ".git") continue;
+    if (["node_modules", ".git"].includes(entry.name)) continue;
     const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...listHtml(fullPath));
-    else if (entry.isFile() && entry.name.toLowerCase().endsWith(".html")) files.push(fullPath);
+    if (entry.isDirectory()) files.push(...listFiles(fullPath, extension));
+    else if (entry.isFile() && entry.name.toLowerCase().endsWith(extension)) files.push(fullPath);
   }
   return files;
 }
 
-const htmlFiles = listHtml(root);
+const htmlFiles = listFiles(root, ".html");
 
 test("los scripts JavaScript incrustados en HTML tienen sintaxis válida", () => {
   const failures = [];
@@ -33,6 +33,21 @@ test("los scripts JavaScript incrustados en HTML tienen sintaxis válida", () =>
       } catch (error) {
         failures.push(path.relative(root, file) + " (script " + scriptIndex + "): " + error.message);
       }
+    }
+  }
+  assert.deepEqual(failures, [], failures.join("\n"));
+});
+
+test("los archivos JavaScript públicos tienen sintaxis válida", () => {
+  const failures = [];
+  for (const file of listFiles(root, ".js")) {
+    const relative = path.relative(root, file);
+    // El servidor tiene su propia comprobación; las pruebas no deben compilarse como scripts de navegador.
+    if (relative === "server.js" || relative.split(path.sep).includes("test")) continue;
+    try {
+      new vm.Script(fs.readFileSync(file, "utf8"), { filename: relative });
+    } catch (error) {
+      failures.push(relative + ": " + error.message);
     }
   }
   assert.deepEqual(failures, [], failures.join("\n"));

@@ -89,7 +89,7 @@ test("la API falla de forma segura si falta la configuración del límite de IA 
   const response = await fetch(baseUrl + "/api/grade-exam", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ questions: [{ question: "2+2?", answer: "4" }], answers: ["4"] })
+    body: JSON.stringify({ questions: [{ type: "choice", question: "2+2?", options: ["2", "3", "4", "5"], answer: 2 }], answers: [2] })
   });
   assert.equal(response.status, 503);
   const data = await response.json();

@@ -30,7 +30,7 @@
 <header class="topbar"><a class="brand" href="index.html">✦ Numelio</a><nav><a href="mi-espacio.html">Mi espacio</a><a href="index.html">Inicio</a><button id="themeBtn" type="button" aria-label="Cambiar tema">☾</button></nav></header>
 <main class="tutor-page">
   <div class="tutor-heading"><span class="eyebrow">TU PROFESOR PARTICULAR</span><h1>¿Qué duda tienes?</h1><p>Pregunta lo que quieras de tus asignaturas. Te lo explico paso a paso, te pongo ejemplos y puedes hablar en lugar de escribir. También puedes escuchar mis respuestas.</p></div>
-  <div class="tutor-toolbar"><label for="subject">Asignatura</label><select id="subject"><option>General</option><option>Matemáticas</option><option>Física y Química</option><option>Biología y Geología</option><option>Geografía e Historia</option><option>Lengua Castellana</option><option>Francés</option><option>Inglés</option><option>Tecnología</option><option>Otra</option></select><button class="btn" id="clearChat" type="button">Nueva conversación</button></div>
+  <div class="tutor-toolbar"><label for="subject">Asignatura</label><select id="subject"><option>General</option><option>Matemáticas</option><option>Física y Química</option><option>Biología y Geología</option><option>Geografía e Historia</option><option>Lengua Castellana</option><option>Francés</option><option>Inglés</option><option>Tecnología</option><option>Otra</option></select><label style="display:flex;align-items:center;gap:7px;font-weight:500"><input id="autoRead" type="checkbox"> Leer respuestas automáticamente</label><button class="btn" id="clearChat" type="button">Nueva conversación</button></div>
   <section class="tutor-panel" aria-label="Conversación con el profesor IA">
     <div class="tutor-messages" id="messages" aria-live="polite" aria-label="Mensajes">
       <div class="tutor-message assistant">¡Hola! Soy tu profesor de Numelio. Cuéntame qué estás estudiando o qué ejercicio no entiendes. Podemos resolverlo juntos paso a paso.</div>
@@ -54,6 +54,8 @@ if(savedTheme==="dark")document.documentElement.classList.add("dark");
 $("themeBtn").onclick=()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("numelio-theme",document.documentElement.classList.contains("dark")?"dark":"light");};
 let messages=[],recognition=null,recording=false,busy=false;
 let userKey="guest";
+$("autoRead").checked=localStorage.getItem("numelio-tutor-auto-read")==="true";
+$("autoRead").addEventListener("change",()=>localStorage.setItem("numelio-tutor-auto-read",$("autoRead").checked?"true":"false"));
 function storageKey(){return "numelio-tutor-chat:"+userKey;}
 function saveChat(){try{localStorage.setItem(storageKey(),JSON.stringify(messages.slice(-40)));}catch{}}
 function renderMessage(message){
@@ -87,7 +89,7 @@ $("chatForm").addEventListener("submit",async event=>{
   const session=await sb.auth.getSession();if(!session.data.session)throw new Error("Tu sesión ha caducado. Vuelve a iniciar sesión.");
   const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.data.session.access_token},body:JSON.stringify({subject:$("subject").value,messages:messages.slice(-16)})});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo obtener una respuesta.");
-  messages.push({role:"assistant",content:data.answer});messages=messages.slice(-40);saveChat();renderAll();setStatus("Respuesta lista. Puedes escucharla en voz alta.");
+  messages.push({role:"assistant",content:data.answer});messages=messages.slice(-40);saveChat();renderAll();setStatus("Respuesta lista. Puedes escucharla en voz alta.");if($("autoRead").checked)speakText(data.answer);
  }catch(error){messages.pop();renderAll();saveChat();$("message").value=text;setStatus(error.message||"No se ha podido conectar con el profesor.");}
  finally{busy=false;$("send").disabled=false;$("message").focus();}
 });
@@ -99,7 +101,7 @@ $("voiceInput").onclick=()=>{
 };
 $("stopVoice").onclick=()=>{if(recognition&&recording)recognition.stop();};
 $("readLast").onclick=()=>{const last=[...messages].reverse().find(m=>m.role==="assistant");if(last)speakText(last.content);else setStatus("Todavía no hay una respuesta que escuchar.");};
-$("clearChat").onclick=()=>{if(!confirm("¿Empezar una conversación nueva? La conversación guardada en este dispositivo se borrará."))return;speechSynthesis?.cancel?.();messages=[];saveChat();renderAll();saveChat();setStatus("Conversación nueva. Pregunta lo que quieras.");};
+$("clearChat").onclick=()=>{if(!confirm("¿Empezar una conversación nueva? La conversación guardada en este dispositivo se borrará."))return;if("speechSynthesis" in window)speechSynthesis.cancel();messages=[];saveChat();renderAll();saveChat();setStatus("Conversación nueva. Pregunta lo que quieras.");};
 init();
 </script>
 </body></html>

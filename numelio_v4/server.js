@@ -153,7 +153,47 @@ async function enforceDailyGenerationLimit(req, res, next) {
 }
 
 function cleanJson(raw){
-  return raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
+  return raw.replace(/^\`\`\`json\\s*/i,"").replace(/^\`\`\`\\s*/i,"").replace(/\\s*\`\`\`$/i,"").trim();
+}
+
+function validateGradeOralRequest(req, res, next) {
+  const body = req.body || {};
+  const { question, expected = "", keyPoints = [], answer } = body;
+  if (typeof question !== "string" || !question.trim() || question.length > 2000 ||
+      typeof answer !== "string" || !answer.trim() || answer.length > 4000 ||
+      typeof expected !== "string" || expected.length > 6000 ||
+      !Array.isArray(keyPoints) || keyPoints.length > 30 ||
+      keyPoints.some(point => typeof point !== "string" || point.length > 300)) {
+    return res.status(400).json({ error: "La pregunta, la respuesta o los criterios no tienen un formato válido o superan el límite permitido." });
+  }
+  next();
+}
+
+function validateGradeExamRequest(req, res, next) {
+  const { subject = "General", questions, answers } = req.body || {};
+  if (typeof subject !== "string" || subject.length > 80 ||
+      !Array.isArray(questions) || questions.length < 1 || questions.length > 20 ||
+      !Array.isArray(answers) || answers.length !== questions.length) {
+    return res.status(400).json({ error: "El examen debe incluir entre 1 y 20 preguntas y una respuesta por pregunta." });
+  }
+  const validQuestions = questions.every(question =>
+    question && typeof question === "object" && !Array.isArray(question) &&
+    typeof question.question === "string" && question.question.length > 0 && question.question.length <= 2000 &&
+    ["choice", "short"].includes(question.type) &&
+    (question.type !== "choice" || (Array.isArray(question.options) && question.options.length === 4 &&
+      question.options.every(option => typeof option === "string" && option.length <= 500))) &&
+    (typeof question.answer === "string" || typeof question.answer === "number") &&
+    String(question.answer).length <= 3000 &&
+    (!question.explanation || (typeof question.explanation === "string" && question.explanation.length <= 1500))
+  );
+  const validAnswers = answers.every(answer =>
+    (typeof answer === "string" && answer.length <= 4000) ||
+    (typeof answer === "number" && Number.isInteger(answer) && answer >= -1 && answer <= 3)
+  );
+  if (!validQuestions || !validAnswers || JSON.stringify(questions).length > 80000) {
+    return res.status(400).json({ error: "El contenido del examen contiene datos no válidos o demasiado largos." });
+  }
+  next();
 }
 
 app.post("/api/generate-exam", enforceDailyGenerationLimit, upload.single("file"), async (req,res)=>{
@@ -265,7 +305,7 @@ app.post("/api/generate-oral-exam", enforceDailyGenerationLimit, upload.single("
  finally{if(path)fs.unlink(path,()=>{});}
 });
 
-app.post("/api/grade-oral-answer", enforceDailyGenerationLimit, async(req,res)=>{
+app.post("/api/grade-oral-answer", validateGradeOralRequest, enforceDailyGenerationLimit, async(req,res)=>{
  try{
   const {question,expected,keyPoints,answer}=req.body||{};
   if(!question||!answer?.trim())return res.status(400).json({error:"Falta la pregunta o tu respuesta."});
@@ -274,7 +314,7 @@ app.post("/api/grade-oral-answer", enforceDailyGenerationLimit, async(req,res)=>
   res.json(JSON.parse(cleanJson(msg.content?.find(x=>x.type==="text")?.text||"")));
  }catch(err){console.error(err);res.status(500).json({error:"No se ha podido corregir la respuesta oral."});}
 });
-app.post("/api/grade-exam", enforceDailyGenerationLimit, async(req,res)=>{
+app.post("/api/grade-exam", validateGradeExamRequest, enforceDailyGenerationLimit, async(req,res)=>{
   try{
     const {subject="General", questions=[], answers=[]}=req.body||{};
     if(!questions.length) return res.status(400).json({error:"No hay preguntas para corregir."});

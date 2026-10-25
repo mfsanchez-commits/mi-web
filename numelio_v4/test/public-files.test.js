@@ -66,6 +66,22 @@ test("la portada y los recursos públicos se sirven", async () => {
   }
 });
 
+test("las respuestas incluyen cabeceras HTTP de seguridad", async () => {
+  const response = await fetch(baseUrl + "/");
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
+  assert.match(response.headers.get("permissions-policy") || "", /camera=\(\)/);
+});
+
+test("el servidor no autoriza orígenes web desconocidos", async () => {
+  const response = await fetch(baseUrl + "/", {
+    headers: { Origin: "https://sitio-no-autorizado.example" }
+  });
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("access-control-allow-origin"), null);
+});
+
 test("la comprobación de salud responde sin exponer configuración", async () => {
   const response = await fetch(baseUrl + "/health");
   assert.equal(response.status, 200);

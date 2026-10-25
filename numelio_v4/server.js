@@ -171,7 +171,7 @@ function cleanJson(raw){
 // Los campos de configuración son datos del usuario: limitar su tamaño y neutralizar saltos de línea.
 function normalizePromptLabel(value, fallback, maxLength = 80) {
   if (typeof value !== "string") return fallback;
-  const normalized = value.replace(/[\\r\\n\\t]+/g, " ").replace(/\\s{2,}/g, " ").trim();
+  const normalized = value.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
   return normalized ? normalized.slice(0, maxLength) : fallback;
 }
 

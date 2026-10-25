@@ -55,6 +55,7 @@ $("themeBtn").onclick=()=>{document.documentElement.classList.toggle("dark");loc
 let messages=[],recognition=null,recording=false,busy=false;
 let userKey="guest";
 const notesById=new Map();
+$("studyNote").addEventListener("change",()=>{const note=notesById.get($("studyNote").value);if(note){const options=[...$("subject").options].map(option=>option.value);if(options.includes(note.asignatura))$("subject").value=note.asignatura;}});
 $("autoRead").checked=localStorage.getItem("numelio-tutor-auto-read")==="true";
 $("autoRead").addEventListener("change",()=>localStorage.setItem("numelio-tutor-auto-read",$("autoRead").checked?"true":"false"));
 function storageKey(){return "numelio-tutor-chat:"+userKey;}
@@ -101,7 +102,7 @@ $("chatForm").addEventListener("submit",async event=>{
  busy=true;$("send").disabled=true;setStatus("Tu profesor está pensando…");
  try{
   const session=await sb.auth.getSession();if(!session.data.session)throw new Error("Tu sesión ha caducado. Vuelve a iniciar sesión.");
-  const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.data.session.access_token},body:JSON.stringify({subject:$("subject").value,messages:messages.slice(-16),studyContext:(notesById.get($("studyNote").value)?.contenido||"").slice(0,12000)})});
+  const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.data.session.access_token},body:JSON.stringify({subject:$("subject").value,messages:messages.slice(-16),studyContext:(()=>{const note=notesById.get($("studyNote").value);return note?("Asignatura: "+note.asignatura+"\nTítulo: "+note.titulo+"\nContenido:\n"+note.contenido).slice(0,12000):"";})()})});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo obtener una respuesta.");
   messages.push({role:"assistant",content:data.answer});messages=messages.slice(-40);saveChat();renderAll();setStatus("Respuesta lista. Puedes escucharla en voz alta.");if($("autoRead").checked)speakText(data.answer);
  }catch(error){messages.pop();renderAll();saveChat();$("message").value=text;setStatus(error.message||"No se ha podido conectar con el profesor.");}

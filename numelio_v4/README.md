@@ -24,7 +24,7 @@ Configura estas variables en el panel de Render (Environment), nunca en archivos
 - `SUPABASE_SERVICE_ROLE_KEY`: clave privada de servidor; no debe enviarse al navegador ni publicarse en GitHub.
 - `PORT`: Render lo configura normalmente de forma automática.
 
-Los topes preparados para el lanzamiento son compartidos entre todas las funciones de IA: Gratis permite 1 operación al mes; Pro permite 30 al mes y un máximo de 3 al día. Crear y corregir un examen cuentan como dos operaciones. La clasificación Pro se lee únicamente de `app_metadata.plan` validado por Supabase; no hay cobro integrado todavía y no debe marcarse Pro a una cuenta hasta confirmar su pago por un medio seguro.
+Los topes preparados para el lanzamiento son compartidos entre todas las funciones de IA: Gratis permite 3 operaciones al mes; Pro permite 30 al mes y un máximo de 3 al día. Crear y corregir un examen cuentan como dos operaciones. La clasificación Pro se lee únicamente de `app_metadata.plan` validado por Supabase; no hay cobro integrado todavía y no debe marcarse Pro a una cuenta hasta confirmar su pago por un medio seguro.
 
 Para activar los topes persistentes, ejecuta `supabase/generation_usage.sql` una vez en el SQL Editor de Supabase. En producción, si falta cualquiera de las variables de Supabase necesarias o la función SQL no está disponible, la API rechaza las operaciones de IA con un error 503 en lugar de recurrir a un contador temporal. En desarrollo se puede usar un contador en memoria, que se reinicia al reiniciar el proceso y no sirve como control de producción.
 

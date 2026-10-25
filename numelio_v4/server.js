@@ -96,7 +96,7 @@ function validFileContent(file, buffer) {
 }
 
 const AI_PLAN_LIMITS = Object.freeze({
-  free: Object.freeze({ daily: 1, monthly: 1 }),
+  free: Object.freeze({ daily: 3, monthly: 3 }),
   pro: Object.freeze({ daily: 3, monthly: 30 })
 });
 const fallbackUsage = new Map();
@@ -158,7 +158,7 @@ async function checkDailyGenerationLimit(req, res, feature) {
         res.status(429).json({
           error: accountPlan === "pro"
             ? "Has agotado las operaciones de IA incluidas en Pro este mes o hoy."
-            : "Has agotado la operación de IA gratuita de este mes."
+            : "Has agotado las 3 operaciones de IA gratuitas de este mes."
         });
         return false;
       }
@@ -173,7 +173,7 @@ async function checkDailyGenerationLimit(req, res, feature) {
     if (dailyUsed >= limits.daily || used.monthly >= limits.monthly) {
       res.status(429).json({ error: accountPlan === "pro"
         ? "Has agotado las operaciones de IA incluidas en Pro este mes o hoy."
-        : "Has agotado la operación de IA gratuita de este mes." });
+        : "Has agotado las 3 operaciones de IA gratuitas de este mes." });
       return false;
     }
     fallbackUsage.set(key, { day: utcDay, daily: dailyUsed + 1, monthly: used.monthly + 1 });

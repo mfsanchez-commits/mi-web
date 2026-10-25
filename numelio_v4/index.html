@@ -5,10 +5,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Numelio — Tu espacio para estudiar mejor</title>
-<meta name="description" content="Pregunta al profesor IA, practica con exámenes y utiliza herramientas de estudio en Numelio.">
+<meta name="description" content="Estudia mejor con Numelio: pregunta al profesor IA, crea exámenes, organiza tus apuntes y practica con herramientas gratuitas.">
+<meta name="theme-color" content="#f7f8fc">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Numelio — Tu espacio para estudiar mejor">
+<meta property="og:description" content="Resuelve dudas, practica con exámenes y estudia a tu ritmo.">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<a class="skip-link" href="#contenido">Saltar al contenido principal</a>
 <header class="topbar">
   <a class="brand" href="index.html" aria-label="Numelio, inicio">✦ Numelio</a>
   <nav aria-label="Navegación principal">
@@ -21,7 +26,7 @@
   </nav>
 </header>
 
-<main>
+<main id="contenido">
   <section class="hero welcome">
     <div class="hero-content">
       <span class="eyebrow">TU ESPACIO DE ESTUDIO</span>
@@ -101,6 +106,7 @@
       </a>
     </div>
     <p id="noResults" class="no-results" hidden>No hay herramientas que coincidan con esa búsqueda. Prueba con otra palabra.</p>
+    <p id="searchStatus" class="search-status" role="status" aria-live="polite" hidden></p>
   </section>
 
   <section class="banner">
@@ -135,12 +141,6 @@
   updateAccountLink();
   window.numelioSupabase?.auth.onAuthStateChange(() => updateAccountLink());
 
-  const searchInput = document.getElementById("search");
-  const noResults = document.getElementById("noResults");
-  searchInput?.addEventListener("input", () => {
-    const visibleCards = [...document.querySelectorAll("#herramientas .card")];
-    noResults.hidden = visibleCards.some(card => card.style.display !== "none");
-  });
 </script>
 </body>
 </html>

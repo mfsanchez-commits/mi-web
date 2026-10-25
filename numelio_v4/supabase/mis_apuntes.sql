@@ -60,3 +60,28 @@ create policy "Cada usuario crea sus flashcards" on public.flashcards for insert
 drop policy if exists "Cada usuario elimina sus flashcards" on public.flashcards;
 create policy "Cada usuario elimina sus flashcards" on public.flashcards for delete to authenticated using ((select auth.uid()) = user_id);
 create index if not exists flashcards_user_id_idx on public.flashcards(user_id);
+
+
+-- Historial de exámenes completados y progreso del estudiante.
+create table if not exists public.study_history (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  subject text not null default 'General',
+  title text not null default 'Examen Numelio',
+  score numeric(4,2) not null check (score >= 0 and score <= 10),
+  correct integer not null check (correct >= 0),
+  total integer not null check (total > 0 and correct <= total),
+  source text not null default 'examen' check (source in ('examen','apuntes','oral')),
+  details jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.study_history enable row level security;
+revoke all on table public.study_history from anon, authenticated;
+grant select, insert, delete on table public.study_history to authenticated;
+drop policy if exists "Cada usuario ve su historial" on public.study_history;
+create policy "Cada usuario ve su historial" on public.study_history for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "Cada usuario guarda su historial" on public.study_history;
+create policy "Cada usuario guarda su historial" on public.study_history for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "Cada usuario elimina su historial" on public.study_history;
+create policy "Cada usuario elimina su historial" on public.study_history for delete to authenticated using ((select auth.uid()) = user_id);
+create index if not exists study_history_user_created_idx on public.study_history(user_id, created_at desc);

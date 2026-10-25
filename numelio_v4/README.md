@@ -29,3 +29,5 @@ Para activar el límite diario persistente de 10 operaciones de IA, ejecuta una 
 La clave de Anthropic solo se utiliza en `server.js`. Si alguna clave privada se publicó anteriormente, revócala y genera una nueva.
 
 En Supabase Auth, añade `https://mi-web-ej4w.onrender.com/cuenta.html?reset=1` a las URL de redirección permitidas para que la recuperación de contraseña pueda volver a Numelio.
+
+Cuando se autorice la publicación de esta rama, configura también `/health` como **Health Check Path** del servicio web en Render. Ese endpoint solo comprueba que el proceso responde; no verifica por sí mismo que Supabase o Anthropic estén disponibles.

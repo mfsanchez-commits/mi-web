@@ -87,6 +87,7 @@
     const updatePasswordBtn = document.getElementById("updatePasswordBtn");
     const passwordLabel = document.querySelector('label[for="password"]');
     const resetMode = new URLSearchParams(window.location.search).get("reset") === "1";
+    const upgradeRequested = new URLSearchParams(window.location.search).get("next") === "upgrade";
     if (resetMode) {
       passwordLabel.textContent = "Nueva contraseña";
       document.getElementById("password").setAttribute("autocomplete", "new-password");
@@ -139,7 +140,7 @@
           message.textContent =
             mode === "signup" ? "Cuenta creada correctamente." : "¡Has iniciado sesión! Abriendo tu espacio…";
           if (result.data.session) {
-            window.location.href = "mi-espacio.html";
+            window.location.href = upgradeRequested ? "mi-espacio.html?upgrade=1" : "mi-espacio.html";
           }
         }
       } catch (error) {
@@ -211,7 +212,7 @@
         message.textContent = "Sesión de recuperación activa. Escribe tu nueva contraseña y guárdala.";
       } else if (loggedIn) {
         message.textContent = "Sesión iniciada como " + session.user.email + ". Abriendo tu espacio…";
-        window.location.replace("mi-espacio.html");
+        window.location.replace(upgradeRequested ? "mi-espacio.html?upgrade=1" : "mi-espacio.html");
       }
     }
 
@@ -226,5 +227,6 @@
     });
   </script>
 <footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
+<script src="/js/plan-upgrade.js"></script>
 </body>
 </html>

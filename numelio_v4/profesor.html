@@ -137,4 +137,5 @@ $("readLast").onclick=()=>{const last=[...messages].reverse().find(m=>m.role==="
 $("clearChat").onclick=()=>{if(!confirm("¿Empezar una conversación nueva? La conversación guardada en este dispositivo se borrará."))return;if("speechSynthesis" in window)speechSynthesis.cancel();messages=[];saveChat();renderAll();saveChat();setStatus("Conversación nueva. Pregunta lo que quieras.");};
 init();
 </script>
+<script src="/js/plan-upgrade.js"></script>
 </body></html>

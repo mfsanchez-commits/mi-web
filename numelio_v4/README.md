@@ -22,9 +22,14 @@ Configura estas variables en el panel de Render (Environment), nunca en archivos
 - `SUPABASE_URL`: URL del proyecto Supabase.
 - `SUPABASE_PUBLISHABLE_KEY`: clave pública de Supabase para validar sesiones.
 - `SUPABASE_SERVICE_ROLE_KEY`: clave privada de servidor; no debe enviarse al navegador ni publicarse en GitHub.
+- `STRIPE_SECRET_KEY`: clave **de pruebas** de Stripe, debe empezar por `sk_test_`.
+- `STRIPE_PRICE_ID`: precio recurrente mensual de Numelio Pro creado en modo de pruebas.
+- `STRIPE_WEBHOOK_SECRET`: secreto `whsec_...` del endpoint de webhook de pruebas de Stripe.
 - `PORT`: Render lo configura normalmente de forma automática.
 
-Los topes preparados para el lanzamiento son compartidos entre todas las funciones de IA: Gratis permite 3 operaciones al mes; Pro permite 30 al mes y un máximo de 3 al día. Crear y corregir un examen cuentan como dos operaciones. La clasificación Pro se lee únicamente de `app_metadata.plan` validado por Supabase; no hay cobro integrado todavía y no debe marcarse Pro a una cuenta hasta confirmar su pago por un medio seguro.
+Los topes preparados para el lanzamiento son compartidos entre todas las funciones de IA: Gratis permite 3 operaciones al mes; Pro permite 30 al mes y un máximo de 3 al día. Crear y corregir un examen cuentan como dos operaciones. La clasificación Pro se lee únicamente de `app_metadata.plan` validado por Supabase. El botón de mejora crea una sesión alojada de Stripe Checkout en modo de pruebas; Pro solo se concede cuando un webhook firmado confirma una suscripción activa y el precio de Numelio Pro.
+
+Para probar pagos, añade en Render las tres variables `STRIPE_*` de arriba con valores **del modo de pruebas**, nunca pegues claves en el código o en el chat. En Stripe, crea un endpoint de webhook de pruebas con URL `https://mi-web-ej4w.onrender.com/api/stripe/webhook` y activa `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid` y `invoice.payment_failed`. Guarda su secreto de firma directamente en `STRIPE_WEBHOOK_SECRET` en Render. El servidor rechaza claves `sk_live_` y el producto/precio de prueba no puede cobrar a clientes reales. No publiques la integración hasta revisar y aprobar los cambios y completar la configuración.
 
 Para activar los topes persistentes, ejecuta `supabase/generation_usage.sql` una vez en el SQL Editor de Supabase. En producción, si falta cualquiera de las variables de Supabase necesarias o la función SQL no está disponible, la API rechaza las operaciones de IA con un error 503 en lugar de recurrir a un contador temporal. En desarrollo se puede usar un contador en memoria, que se reinicia al reiniciar el proceso y no sirve como control de producción.
 

@@ -52,7 +52,9 @@ app.use(cors({ origin(origin, callback) {
   if (!origin || allowedOrigins.has(origin)) return callback(null, true);
   return callback(new Error("Origen no permitido."));
 } }));
-app.use(express.json({limit:"2mb"}));
+app.use(express.json({limit:"2mb", verify(req, _res, buffer) {
+  if (req.originalUrl.split("?")[0] === "/api/stripe/webhook") req.rawBody = Buffer.from(buffer);
+}}));
 
 // Publicar solo formatos web esperados y bloquear archivos internos del proyecto.
 const publicStaticExtensions = new Set([
@@ -115,9 +117,181 @@ async function identifyRequester(req) {
     const user = await response.json();
     userId = user.id || null;
     plan = user.app_metadata?.plan === "pro" ? "pro" : "free";
+    return { userId, plan, email: user.email || null, appMetadata: user.app_metadata || {}, ipHash: sha256(req.ip || req.socket?.remoteAddress || "unknown") };
   }
   return { userId, plan, ipHash: sha256(req.ip || req.socket?.remoteAddress || "unknown") };
 }
+
+function stripeTestConfigurationReady(includeWebhook = false) {
+  return Boolean(process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_") &&
+    process.env.STRIPE_PRICE_ID?.startsWith("price_") &&
+    (!includeWebhook || process.env.STRIPE_WEBHOOK_SECRET?.startsWith("whsec_")));
+}
+
+async function stripeRequest(endpoint, { method = "GET", params } = {}) {
+  const response = await fetch("https://api.stripe.com/v1/" + endpoint, {
+    method,
+    headers: {
+      Authorization: "Bearer " + process.env.STRIPE_SECRET_KEY,
+      ...(params ? { "Content-Type": "application/x-www-form-urlencoded" } : {})
+    },
+    ...(params ? { body: params.toString() } : {})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result?.error?.message || "No se ha podido conectar con Stripe.");
+    error.status = response.status;
+    throw error;
+  }
+  return result;
+}
+
+app.post("/api/billing/checkout", async (req, res) => {
+  try {
+    if (!stripeTestConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(503).json({ error: "La suscripción de prueba aún no está configurada completamente." });
+    }
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY) {
+      return res.status(503).json({ error: "El inicio de sesión no está configurado." });
+    }
+    const identity = await identifyRequester(req);
+    if (!identity.userId || !identity.email) return res.status(401).json({ error: "Inicia sesión antes de mejorar a Pro." });
+    if (identity.plan === "pro") return res.status(409).json({ error: "Tu cuenta ya tiene el plan Pro." });
+    const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://mi-web-ej4w.onrender.com";
+    const params = new URLSearchParams({
+      mode: "subscription",
+      "line_items[0][price]": process.env.STRIPE_PRICE_ID,
+      "line_items[0][quantity]": "1",
+      customer_email: identity.email,
+      client_reference_id: identity.userId,
+      "metadata[supabase_user_id]": identity.userId,
+      "subscription_data[metadata][supabase_user_id]": identity.userId,
+      "subscription_data[metadata][app_product]": "numelio_pro",
+      success_url: origin + "/mi-espacio.html?subscription=success",
+      cancel_url: origin + "/mi-espacio.html?subscription=cancelled"
+    });
+    const session = await stripeRequest("checkout/sessions", { method: "POST", params });
+    if (!session.url) throw new Error("Stripe no devolvió el enlace seguro de pago.");
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error("No se pudo iniciar el checkout de Stripe:", error.status || "error de conexión");
+    res.status(error.status === 401 ? 401 : 502).json({ error: "No se ha podido abrir el pago seguro. Inténtalo más tarde." });
+  }
+});
+
+app.post("/api/billing/portal", async (req, res) => {
+  try {
+    if (!stripeTestConfigurationReady()) return res.status(503).json({ error: "La gestión de suscripciones de prueba aún no está configurada." });
+    const identity = await identifyRequester(req);
+    if (!identity.userId || !identity.appMetadata?.stripe_customer_id) {
+      return res.status(404).json({ error: "No se encontró una suscripción para esta cuenta." });
+    }
+    const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://mi-web-ej4w.onrender.com";
+    const params = new URLSearchParams({
+      customer: identity.appMetadata.stripe_customer_id,
+      return_url: origin + "/mi-espacio.html"
+    });
+    const session = await stripeRequest("billing_portal/sessions", { method: "POST", params });
+    if (!session.url) throw new Error("Stripe no devolvió el enlace del portal.");
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error("No se pudo abrir el portal de Stripe:", error.status || "error de conexión");
+    res.status(error.status === 401 ? 401 : 502).json({ error: "No se ha podido abrir la gestión de la suscripción." });
+  }
+});
+
+function verifyStripeWebhook(rawBody, signatureHeader) {
+  if (!rawBody || !signatureHeader || !process.env.STRIPE_WEBHOOK_SECRET) return false;
+  const parts = signatureHeader.split(",").map(part => part.split("="));
+  const timestamp = Number(parts.find(([key]) => key === "t")?.[1]);
+  const signatures = parts.filter(([key]) => key === "v1").map(([, value]) => value);
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300 || !signatures.length) return false;
+  const expected = crypto.createHmac("sha256", process.env.STRIPE_WEBHOOK_SECRET)
+    .update(String(timestamp) + ".").update(rawBody).digest();
+  return signatures.some(value => {
+    const received = Buffer.from(value, "hex");
+    return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+  });
+}
+
+async function setSupabaseSubscription(userId, subscription, customerId) {
+  if (!userId || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Falta configuración de Supabase para sincronizar la suscripción.");
+  }
+  const base = process.env.SUPABASE_URL.replace(/\/$/, "") + "/auth/v1/admin/users/" + encodeURIComponent(userId);
+  const headers = {
+    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: "Bearer " + process.env.SUPABASE_SERVICE_ROLE_KEY,
+    "Content-Type": "application/json"
+  };
+  const currentResponse = await fetch(base, { headers });
+  if (!currentResponse.ok) throw new Error("Supabase no ha podido leer la cuenta del usuario.");
+  const current = await currentResponse.json();
+  if (current.app_metadata?.stripe_subscription_id &&
+      current.app_metadata.stripe_subscription_id !== subscription?.id &&
+      subscription?.status !== "active") return;
+  const isMatchingPaidSubscription = subscription?.status === "active" &&
+    subscription?.metadata?.supabase_user_id === userId &&
+    subscription?.items?.data?.some(item => item.price?.id === process.env.STRIPE_PRICE_ID);
+  const stripeCustomerId = typeof customerId === "string" ? customerId : customerId?.id;
+  const appMetadata = {
+    ...(current.app_metadata || {}),
+    plan: isMatchingPaidSubscription ? "pro" : "free",
+    stripe_customer_id: stripeCustomerId || subscription?.customer || current.app_metadata?.stripe_customer_id || null,
+    stripe_subscription_id: subscription?.id || null,
+    stripe_subscription_status: subscription?.status || "canceled"
+  };
+  const updateResponse = await fetch(base, {
+    method: "PUT", headers,
+    body: JSON.stringify({ app_metadata: appMetadata })
+  });
+  if (!updateResponse.ok) throw new Error("Supabase no ha podido actualizar el plan del usuario.");
+}
+
+app.post("/api/stripe/webhook", async (req, res) => {
+  if (!stripeTestConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).send("Webhook no configurado.");
+  }
+  if (!verifyStripeWebhook(req.rawBody, req.get("stripe-signature"))) {
+    return res.status(400).send("Firma de Stripe no válida.");
+  }
+  try {
+    const event = JSON.parse(req.rawBody.toString("utf8"));
+    if (event.livemode !== false) return res.status(400).send("Este endpoint solo acepta eventos de prueba.");
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const userId = session.client_reference_id;
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+      if (!userId || !subscriptionId || session.mode !== "subscription") return res.sendStatus(200);
+      const subscription = await stripeRequest("subscriptions/" + encodeURIComponent(subscriptionId));
+      if (subscription.metadata?.supabase_user_id !== userId) return res.status(400).send("La cuenta no coincide.");
+      await setSupabaseSubscription(userId, subscription, session.customer);
+    } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) {
+      const snapshot = event.data.object;
+      const userId = snapshot.metadata?.supabase_user_id;
+      if (!userId) return res.sendStatus(200);
+      let subscription = snapshot;
+      if (event.type !== "customer.subscription.deleted") {
+        subscription = await stripeRequest("subscriptions/" + encodeURIComponent(snapshot.id));
+      }
+      if (subscription.metadata?.supabase_user_id !== userId) return res.status(400).send("La cuenta no coincide.");
+      await setSupabaseSubscription(userId, subscription, subscription.customer);
+    } else if (["invoice.paid", "invoice.payment_failed"].includes(event.type)) {
+      const invoice = event.data.object;
+      const relatedSubscription = invoice.subscription || invoice.parent?.subscription_details?.subscription;
+      const subscriptionId = typeof relatedSubscription === "string" ? relatedSubscription : relatedSubscription?.id;
+      if (!subscriptionId) return res.sendStatus(200);
+      const subscription = await stripeRequest("subscriptions/" + encodeURIComponent(subscriptionId));
+      const userId = subscription.metadata?.supabase_user_id;
+      if (!userId) return res.sendStatus(200);
+      await setSupabaseSubscription(userId, subscription, subscription.customer);
+    }
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("No se pudo procesar el webhook de Stripe:", error?.message || "Error desconocido");
+    res.status(500).send("No se pudo sincronizar la suscripción.");
+  }
+});
 
 async function checkDailyGenerationLimit(req, res, feature) {
   try {
@@ -158,7 +332,7 @@ async function checkDailyGenerationLimit(req, res, feature) {
         res.status(429).json({
           error: accountPlan === "pro"
             ? "Has agotado las operaciones de IA incluidas en Pro este mes o hoy."
-            : "Has agotado las 3 operaciones de IA gratuitas de este mes."
+            : "Has agotado las 3 operaciones de IA gratuitas de este mes. Mejora a Pro para tener hasta 30 al mes."
         });
         return false;
       }
@@ -173,7 +347,7 @@ async function checkDailyGenerationLimit(req, res, feature) {
     if (dailyUsed >= limits.daily || used.monthly >= limits.monthly) {
       res.status(429).json({ error: accountPlan === "pro"
         ? "Has agotado las operaciones de IA incluidas en Pro este mes o hoy."
-        : "Has agotado las 3 operaciones de IA gratuitas de este mes." });
+        : "Has agotado las 3 operaciones de IA gratuitas de este mes. Mejora a Pro para tener hasta 30 al mes." });
       return false;
     }
     fallbackUsage.set(key, { day: utcDay, daily: dailyUsed + 1, monthly: used.monthly + 1 });

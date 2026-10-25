@@ -113,7 +113,7 @@ $("chatForm").addEventListener("submit",async event=>{
  try{
   const session=await sb.auth.getSession();if(!session.data.session)throw new Error("Tu sesión ha caducado. Vuelve a iniciar sesión.");
   const note=notesById.get($("studyNote").value);
-  const studyContext=note?("Asignatura: "+note.asignatura+"\\nTítulo: "+note.titulo+"\\nContenido:\\n"+note.contenido).slice(0,12000):"";
+  const studyContext=note?("Asignatura: "+note.asignatura+"\nTítulo: "+note.titulo+"\nContenido:\n"+note.contenido).slice(0,12000):"";
   const payload=new FormData();
   payload.append("subject",$("subject").value);
   payload.append("messages",JSON.stringify(messages.slice(-16)));

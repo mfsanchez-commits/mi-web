@@ -4,6 +4,7 @@
 
   function addUpgradeLink() {
     queued = false;
+    if (document.querySelector(".numelio-upgrade-link")) return;
     const candidates = Array.from(document.querySelectorAll("[role='status'], p, div, section"))
       .filter(element => element.textContent.includes(exhaustedText) && !element.querySelector(".numelio-upgrade-link"))
       .sort((a, b) => a.textContent.length - b.textContent.length);

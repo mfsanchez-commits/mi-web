@@ -63,13 +63,14 @@ app.use((req, res, next) => {
   pathname = path.posix.normalize("/" + pathname.replace(/^\/+/, ""));
   const segments = pathname.split("/").filter(Boolean).map(segment => segment.toLowerCase());
   if (segments.some(segment => blockedPublicSegments.has(segment))) return res.sendStatus(404);
-  // Las rutas de API no son archivos estáticos; deben llegar a sus controladores.
-  if (pathname === "/api" || pathname.startsWith("/api/")) return next();
+  // Las rutas de API y la comprobación de salud no son archivos estáticos.
+  if (pathname === "/health" || pathname === "/api" || pathname.startsWith("/api/")) return next();
   const extension = path.posix.extname(pathname).toLowerCase();
   if (pathname !== "/" && (!extension || !publicStaticExtensions.has(extension))) return res.sendStatus(404);
   next();
 });
 app.use(express.static(".", { dotfiles: "deny" }));
+app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 
 const client = new Anthropic({apiKey:process.env.ANTHROPIC_API_KEY});
 

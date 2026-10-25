@@ -96,6 +96,28 @@ test("la API falla de forma segura si falta la configuración del límite de IA 
   assert.match(data.error, /control de uso no está configurado/i);
 });
 
+test("la corrección rechaza exámenes mal formados antes de consumir cuota", async () => {
+  const response = await fetch(baseUrl + "/api/grade-exam", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ questions: [], answers: [] })
+  });
+  assert.equal(response.status, 400);
+  const data = await response.json();
+  assert.match(data.error, /entre 1 y 20 preguntas/i);
+});
+
+test("la corrección oral rechaza respuestas demasiado largas antes de consumir cuota", async () => {
+  const response = await fetch(baseUrl + "/api/grade-oral-answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: "Pregunta", answer: "x".repeat(4001) })
+  });
+  assert.equal(response.status, 400);
+  const data = await response.json();
+  assert.match(data.error, /formato válido|superan el límite/i);
+});
+
 test("las rutas codificadas a archivos internos tampoco son públicas", async () => {
   for (const path of ["/%73erver.js", "/supabase%2Fgeneration_usage.sql"]) {
     const response = await fetch(baseUrl + path);

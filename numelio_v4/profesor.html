@@ -37,7 +37,10 @@
     </div>
     <form class="tutor-compose" id="chatForm">
       <label for="message"><strong>Tu pregunta</strong></label>
-      <textarea id="message" maxlength="4000" placeholder="Ej. No entiendo cómo se resuelve una ecuación con valor absoluto…" required></textarea>
+      <textarea id="message" maxlength="4000" placeholder="Ej. No entiendo cómo se resuelve una ecuación con valor absoluto…"></textarea>
+      <label for="tutorFile" style="display:block;margin-top:10px;font-weight:700">Adjuntar apuntes, PDF o foto (opcional)</label>
+      <input id="tutorFile" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,application/pdf,text/plain,image/jpeg,image/png,image/webp" style="display:block;max-width:100%;margin-top:6px">
+      <p class="tutor-status" id="fileStatus">PDF, TXT, JPG, PNG o WEBP; máximo 10 MB.</p>
       <div class="tutor-actions"><button class="btn primary" id="send" type="submit">Enviar pregunta</button><button class="btn" id="voiceInput" type="button">🎙️ Hablar</button><button class="btn" id="stopVoice" type="button" disabled>Detener voz</button><button class="btn" id="readLast" type="button">🔊 Escuchar respuesta</button></div>
       <p class="tutor-status" id="status" role="status">Puedes escribir o usar el micrófono. Para dictar, el navegador puede pedir permiso.</p>
     </form>
@@ -94,17 +97,32 @@ async function init(){
  try{const old=JSON.parse(localStorage.getItem(storageKey())||"[]");if(Array.isArray(old))messages=old.filter(m=>m&&["user","assistant"].includes(m.role)&&typeof m.content==="string").slice(-40);}catch{}
  renderAll();setStatus("Sesión activa. Tu conversación se guarda en este dispositivo.");
 }
+$("tutorFile").addEventListener("change",()=>{
+ const file=$("tutorFile").files[0];
+ $("fileStatus").textContent=file?("Archivo seleccionado: "+file.name+" ("+(file.size/1024/1024).toFixed(2)+" MB)."):"PDF, TXT, JPG, PNG o WEBP; máximo 10 MB.";
+});
 $("chatForm").addEventListener("submit",async event=>{
  event.preventDefault();if(busy)return;
- const text=$("message").value.trim();if(!text)return;
+ const file=$("tutorFile").files[0];
+ const text=$("message").value.trim() || (file ? "Explícame el archivo adjunto paso a paso y ayúdame a estudiar su contenido." : "");
+ if(!text){setStatus("Escribe una pregunta o adjunta un archivo.");return;}
  if(text.length>4000){setStatus("La pregunta es demasiado larga. Resúmela un poco.");return;}
- const userMessage={role:"user",content:text};messages.push(userMessage);renderAll();saveChat();$("message").value="";
- busy=true;$("send").disabled=true;setStatus("Tu profesor está pensando…");
+ if(file&&file.size>10*1024*1024){setStatus("El archivo supera los 10 MB. Elige uno más pequeño.");return;}
+ const userMessage={role:"user",content:text+(file?" [Archivo adjunto: "+file.name+"]":"")};messages.push(userMessage);renderAll();saveChat();$("message").value="";
+ busy=true;$("send").disabled=true;setStatus(file?"Tu profesor está leyendo el archivo…":"Tu profesor está pensando…");
  try{
   const session=await sb.auth.getSession();if(!session.data.session)throw new Error("Tu sesión ha caducado. Vuelve a iniciar sesión.");
-  const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.data.session.access_token},body:JSON.stringify({subject:$("subject").value,messages:messages.slice(-16),studyContext:(()=>{const note=notesById.get($("studyNote").value);return note?("Asignatura: "+note.asignatura+"\nTítulo: "+note.titulo+"\nContenido:\n"+note.contenido).slice(0,12000):"";})()})});
+  const note=notesById.get($("studyNote").value);
+  const studyContext=note?("Asignatura: "+note.asignatura+"\\nTítulo: "+note.titulo+"\\nContenido:\\n"+note.contenido).slice(0,12000):"";
+  const payload=new FormData();
+  payload.append("subject",$("subject").value);
+  payload.append("messages",JSON.stringify(messages.slice(-16)));
+  payload.append("studyContext",studyContext);
+  if(file)payload.append("file",file,file.name);
+  const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Authorization":"Bearer "+session.data.session.access_token},body:payload});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo obtener una respuesta.");
   messages.push({role:"assistant",content:data.answer});messages=messages.slice(-40);saveChat();renderAll();setStatus("Respuesta lista. Puedes escucharla en voz alta.");if($("autoRead").checked)speakText(data.answer);
+  $("tutorFile").value="";$("fileStatus").textContent="PDF, TXT, JPG, PNG o WEBP; máximo 10 MB.";
  }catch(error){messages.pop();renderAll();saveChat();$("message").value=text;setStatus(error.message||"No se ha podido conectar con el profesor.");}
  finally{busy=false;$("send").disabled=false;$("message").focus();}
 });

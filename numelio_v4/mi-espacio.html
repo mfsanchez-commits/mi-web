@@ -15,6 +15,9 @@
     .space-actions{display:flex;gap:10px;flex-wrap:wrap}
     .space-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:24px 0}
     .space-stat,.space-card,.subject-panel,.recent-panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);min-width:0}
+    .plan-panel{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:24px}
+    .plan-panel p{margin:6px 0 0;color:var(--muted);line-height:1.5}
+    #planMessage{width:100%;margin:0;color:var(--muted);font-size:14px}
     .space-stat span{display:block;color:var(--muted);font-size:13px}
     .space-stat strong{display:block;font-size:30px;letter-spacing:-1px;margin-top:5px}
     .space-section-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin:34px 0 16px}
@@ -79,6 +82,13 @@
       </div>
     </div>
 
+    <section class="plan-panel" aria-labelledby="planTitle">
+      <div><span class="eyebrow">TU SUSCRIPCIÓN</span><h2 id="planTitle" style="margin:6px 0">Plan Gratis</h2><p id="planDescription">3 operaciones de IA al mes. Pro incluye hasta 30 al mes y un máximo de 3 al día.</p><p>Modo de pruebas: no se cobrarán pagos reales. El cálculo de impuestos aún no está configurado.</p></div>
+      <button class="btn primary" type="button" id="upgradeBtn">Mejorar a Pro · 9,99 €/mes</button>
+      <button class="btn" type="button" id="managePlanBtn" hidden>Gestionar suscripción</button>
+      <p id="planMessage" role="status" aria-live="polite"></p>
+    </section>
+
     <section aria-labelledby="summaryTitle">
       <div class="space-section-heading">
         <div><span class="eyebrow">RESUMEN</span><h2 id="summaryTitle">Tu material de estudio</h2><p>Contadores reales de los materiales que tienes guardados.</p></div>
@@ -130,6 +140,13 @@
     const userEmail = document.getElementById("userEmail");
     const spaceMessage = document.getElementById("spaceMessage");
     const logoutBtn = document.getElementById("logoutBtn");
+    const upgradeBtn = document.getElementById("upgradeBtn");
+    const managePlanBtn = document.getElementById("managePlanBtn");
+    const planTitle = document.getElementById("planTitle");
+    const planDescription = document.getElementById("planDescription");
+    const planMessage = document.getElementById("planMessage");
+    const query = new URLSearchParams(window.location.search);
+    let awaitingPlanRefresh = false;
     const subjectNames = ["Matemáticas","Lengua","Física y Química","Biología","Geografía e Historia","Francés","Deporte","Religión","General","Otra"];
     const savedTheme = localStorage.getItem("numelio-theme");
     if (savedTheme === "dark") document.documentElement.classList.add("dark");
@@ -298,6 +315,25 @@
         return;
       }
       userEmail.textContent = data.session.user.email || "Usuario";
+      const isPro = data.session.user.app_metadata?.plan === "pro";
+      planTitle.textContent = isPro ? "Plan Pro activo" : "Plan Gratis";
+      planDescription.textContent = isPro
+        ? "Tienes hasta 30 operaciones de IA al mes y un máximo de 3 al día."
+        : "Incluye 3 operaciones de IA al mes. Pro incluye hasta 30 al mes y un máximo de 3 al día.";
+      upgradeBtn.hidden = isPro;
+      managePlanBtn.hidden = !isPro;
+      if (query.get("subscription") === "success") {
+        planMessage.textContent = isPro
+          ? "Stripe ha confirmado tu suscripción. Ya tienes Pro activo."
+          : "Pago completado. Stripe está confirmando la suscripción; pulsa «Actualizar estado» en unos segundos.";
+        if (!isPro) {
+          awaitingPlanRefresh = true;
+          upgradeBtn.textContent = "Actualizar estado";
+        }
+      } else if (query.get("subscription") === "cancelled") {
+        planMessage.textContent = "No se ha completado ningún pago. Puedes volver a intentarlo cuando quieras.";
+      }
+      if (query.get("upgrade") === "1" && !isPro) setTimeout(() => upgradeBtn.click(), 0);
       await Promise.all([loadDashboard(data.session.user.id), loadExamHistory(data.session.access_token)]);
     }
 
@@ -314,8 +350,57 @@
       window.location.replace("index.html");
     });
 
+    upgradeBtn.addEventListener("click", async () => {
+      if (!client) { planMessage.textContent = "No se ha podido cargar el servicio de cuentas."; return; }
+      if (awaitingPlanRefresh) {
+        planMessage.textContent = "Comprobando el estado de tu suscripción…";
+        await client.auth.refreshSession();
+        window.location.reload();
+        return;
+      }
+      upgradeBtn.disabled = true;
+      upgradeBtn.textContent = "Abriendo pago seguro…";
+      planMessage.textContent = "Conectando con Stripe en modo de pruebas…";
+      try {
+        const { data, error } = await client.auth.getSession();
+        if (error || !data.session) { window.location.replace("cuenta.html?next=upgrade"); return; }
+        const response = await fetch("/api/billing/checkout", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + data.session.access_token }
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "No se ha podido abrir el pago.");
+        window.location.assign(payload.url);
+      } catch (error) {
+        planMessage.textContent = error.message || "No se ha podido abrir el pago seguro.";
+        upgradeBtn.disabled = false;
+        upgradeBtn.textContent = "Mejorar a Pro · 9,99 €/mes";
+      }
+    });
+
+    managePlanBtn.addEventListener("click", async () => {
+      if (!client) { planMessage.textContent = "No se ha podido cargar el servicio de cuentas."; return; }
+      managePlanBtn.disabled = true;
+      planMessage.textContent = "Abriendo la gestión segura de Stripe…";
+      try {
+        const { data, error } = await client.auth.getSession();
+        if (error || !data.session) { window.location.replace("cuenta.html"); return; }
+        const response = await fetch("/api/billing/portal", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + data.session.access_token }
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "No se ha podido abrir la gestión.");
+        window.location.assign(payload.url);
+      } catch (error) {
+        planMessage.textContent = error.message || "No se ha podido abrir la gestión de la suscripción.";
+        managePlanBtn.disabled = false;
+      }
+    });
+
     checkSession();
   </script>
   <footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
+<script src="/js/plan-upgrade.js"></script>
 </body>
 </html>

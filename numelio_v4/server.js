@@ -123,6 +123,7 @@ async function checkDailyGenerationLimit(req, res) {
       return false;
     }
     const identity = await identifyRequester(req);
+    req.authenticatedUserId = identity.userId;
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       const response = await fetch(process.env.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/consume_generation_limit", {
         method: "POST",
@@ -189,8 +190,9 @@ function validateGradeOralRequest(req, res, next) {
 }
 
 function validateGradeExamRequest(req, res, next) {
-  const { subject = "General", questions, answers } = req.body || {};
+  const { subject = "General", title = "Examen Numelio", questions, answers } = req.body || {};
   if (typeof subject !== "string" || subject.length > 80 ||
+      typeof title !== "string" || title.length > 200 ||
       !Array.isArray(questions) || questions.length < 1 || questions.length > 20 ||
       !Array.isArray(answers) || answers.length !== questions.length) {
     return res.status(400).json({ error: "El examen debe incluir entre 1 y 20 preguntas y una respuesta por pregunta." });
@@ -378,7 +380,14 @@ EXAMEN (DATOS): ${JSON.stringify(questions)}\nRESPUESTAS DEL ALUMNO (DATOS): ${J
           typeof item.feedback === "string" && typeof item.expected === "string")) {
       throw new Error("La IA no ha devuelto una corrección válida.");
     }
-    res.json({score:result.score,correct:result.correct,total:result.total,summary:result.summary.slice(0,3000),
+    const historySaved = await storeExamHistory(req.authenticatedUserId, {
+      subject: normalizePromptLabel(subject, "General", 80),
+      title: normalizePromptLabel(req.body?.title, "Examen Numelio", 200),
+      score: result.score,
+      correct: result.correct,
+      total: result.total
+    });
+    res.json({score:result.score,correct:result.correct,total:result.total,summary:result.summary.slice(0,3000),historySaved,
       results:result.results.map(item=>({index:item.index,correct:item.correct,score:typeof item.score==="number"?Math.max(0,Math.min(1,item.score)):undefined,
         feedback:item.feedback.slice(0,2000),expected:item.expected.slice(0,2000)}))});
   }catch(err){
@@ -396,6 +405,75 @@ async function requireTutorAccount(req, res, next) {
     res.status(error.status || 503).json({ error: error.status ? error.message : "No se ha podido verificar tu sesión." });
   }
 }
+
+function examHistoryConfigured(res) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    res.status(503).json({ error: "El historial de exámenes no está configurado todavía." });
+    return false;
+  }
+  return true;
+}
+
+async function requireExamHistoryAccount(req, res, next) {
+  if (!examHistoryConfigured(res)) return;
+  try {
+    const identity = await identifyRequester(req);
+    if (!identity.userId) return res.status(401).json({ error: "Inicia sesión para consultar tu historial de exámenes." });
+    req.examHistoryUserId = identity.userId;
+    next();
+  } catch (error) {
+    res.status(error.status || 503).json({ error: error.status ? error.message : "No se ha podido verificar tu sesión." });
+  }
+}
+
+function supabaseServiceHeaders(extra = {}) {
+  return {
+    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: "Bearer " + process.env.SUPABASE_SERVICE_ROLE_KEY,
+    ...extra
+  };
+}
+
+async function storeExamHistory(userId, result) {
+  if (!userId || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const response = await fetch(process.env.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/exam_history", {
+      method: "POST",
+      headers: supabaseServiceHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+      body: JSON.stringify({ user_id: userId, ...result })
+    });
+    if (!response.ok) {
+      console.error("No se pudo guardar el resultado corregido. Estado de Supabase:", response.status);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("No se pudo guardar el resultado corregido:", error?.message || "Error desconocido");
+    return false;
+  }
+}
+
+app.get("/api/exam-history", requireExamHistoryAccount, async (req, res) => {
+  try {
+    const query = new URLSearchParams({
+      select: "id,subject,title,score,correct,total,created_at",
+      user_id: "eq." + req.examHistoryUserId,
+      order: "created_at.desc",
+      limit: "50"
+    });
+    const response = await fetch(process.env.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/exam_history?" + query, {
+      headers: supabaseServiceHeaders()
+    });
+    if (!response.ok) {
+      console.error("No se pudo cargar el historial de exámenes. Estado de Supabase:", response.status);
+      return res.status(503).json({ error: "No se ha podido cargar el historial. Comprueba que la tabla del historial esté configurada en Supabase." });
+    }
+    res.json(await response.json());
+  } catch (error) {
+    console.error("No se pudo cargar el historial de exámenes:", error?.message || "Error desconocido");
+    res.status(503).json({ error: "No se ha podido cargar el historial de exámenes." });
+  }
+});
 
 app.post("/api/tutor-chat", requireTutorAccount, enforceDailyGenerationLimit, upload.single("file"), async (req, res) => {
   let uploadedPath = null;

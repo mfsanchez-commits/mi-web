@@ -83,7 +83,7 @@
     </div>
 
     <section class="plan-panel" aria-labelledby="planTitle">
-      <div><span class="eyebrow">TU SUSCRIPCIÓN</span><h2 id="planTitle" style="margin:6px 0">Plan Gratis</h2><p id="planDescription">3 operaciones de IA al mes. Pro incluye hasta 30 al mes y un máximo de 3 al día.</p><p>Modo de pruebas: no se cobrarán pagos reales. El cálculo de impuestos aún no está configurado.</p></div>
+      <div><span class="eyebrow">TU SUSCRIPCIÓN</span><h2 id="planTitle" style="margin:6px 0">Plan Gratis</h2><p id="planDescription">3 operaciones de IA al mes. Pro incluye hasta 30 al mes y un máximo de 3 al día.</p><p id="planEnvironment">Comprobando el entorno de pagos…</p></div>
       <button class="btn primary" type="button" id="upgradeBtn">Mejorar a Pro · 9,99 €/mes</button>
       <button class="btn" type="button" id="managePlanBtn" hidden>Gestionar suscripción</button>
       <p id="planMessage" role="status" aria-live="polite"></p>
@@ -144,6 +144,7 @@
     const managePlanBtn = document.getElementById("managePlanBtn");
     const planTitle = document.getElementById("planTitle");
     const planDescription = document.getElementById("planDescription");
+    const planEnvironment = document.getElementById("planEnvironment");
     const planMessage = document.getElementById("planMessage");
     const query = new URLSearchParams(window.location.search);
     let awaitingPlanRefresh = false;
@@ -315,13 +316,39 @@
         return;
       }
       userEmail.textContent = data.session.user.email || "Usuario";
-      const isPro = data.session.user.app_metadata?.plan === "pro";
+      let billingStatus = null;
+      try {
+        const response = await fetch("/api/billing/status", {
+          headers: { Authorization: "Bearer " + data.session.access_token }
+        });
+        if (!response.ok) throw new Error("No se pudo verificar el plan.");
+        billingStatus = await response.json();
+      } catch {
+        planEnvironment.textContent = "No se pudo comprobar el entorno de pagos. Abre la versión publicada de Numelio e inténtalo de nuevo.";
+        planMessage.textContent = "No se ha podido verificar el estado de la suscripción.";
+      }
+      const isPro = billingStatus?.plan === "pro";
+      const checkoutReady = Boolean(billingStatus?.checkoutReady);
+      const portalReady = Boolean(billingStatus?.portalReady);
       planTitle.textContent = isPro ? "Plan Pro activo" : "Plan Gratis";
       planDescription.textContent = isPro
         ? "Tienes hasta 30 operaciones de IA al mes y un máximo de 3 al día."
         : "Incluye 3 operaciones de IA al mes. Pro incluye hasta 30 al mes y un máximo de 3 al día.";
+      if (billingStatus) {
+        planEnvironment.textContent = billingStatus.mode === "live"
+          ? checkoutReady
+            ? "Modo activo: los pagos pueden generar cargos reales. El cálculo de impuestos aún no está configurado."
+            : "Modo activo seleccionado, pero Stripe aún no está listo para iniciar pagos."
+          : billingStatus.mode === "test"
+            ? checkoutReady
+              ? "Modo de pruebas: no se cobrarán pagos reales."
+              : "Modo de pruebas seleccionado, pero Stripe aún no está listo."
+            : "El entorno de pagos no está configurado.";
+      }
       upgradeBtn.hidden = isPro;
       managePlanBtn.hidden = !isPro;
+      upgradeBtn.disabled = !checkoutReady;
+      managePlanBtn.disabled = !portalReady;
       if (query.get("subscription") === "success") {
         planMessage.textContent = isPro
           ? "Stripe ha confirmado tu suscripción. Ya tienes Pro activo."

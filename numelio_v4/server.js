@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
+import Stripe from "stripe";
 import pdfParse from "pdf-parse";
 import fs from "fs";
 import crypto from "crypto";
@@ -86,6 +87,8 @@ app.use(express.static(".", { dotfiles: "deny" }));
 app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 
 const client = new Anthropic({apiKey:process.env.ANTHROPIC_API_KEY});
+let stripeClientInstance = null;
+let stripeClientKey = null;
 
 function validFileContent(file, buffer) {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -116,40 +119,60 @@ async function identifyRequester(req) {
     if (!response.ok) throw Object.assign(new Error("La sesión no es válida. Inicia sesión de nuevo."), { status: 401 });
     const user = await response.json();
     userId = user.id || null;
-    plan = user.app_metadata?.plan === "pro" ? "pro" : "free";
+    plan = planForStripeMode(user.app_metadata || {}, stripeMode());
     return { userId, plan, email: user.email || null, appMetadata: user.app_metadata || {}, ipHash: sha256(req.ip || req.socket?.remoteAddress || "unknown") };
   }
   return { userId, plan, ipHash: sha256(req.ip || req.socket?.remoteAddress || "unknown") };
 }
 
-function stripeTestConfigurationReady(includeWebhook = false) {
-  return Boolean(process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_") &&
+function stripeMode() {
+  const configuredMode = (process.env.STRIPE_MODE || "test").trim().toLowerCase();
+  return configuredMode === "test" || configuredMode === "live" ? configuredMode : null;
+}
+
+function stripeKeyReady() {
+  const mode = stripeMode();
+  const expectedKeyPrefixes = mode === "live" ? ["sk_live_", "rk_live_"] : mode === "test" ? ["sk_test_", "rk_test_"] : [];
+  return expectedKeyPrefixes.some(prefix => process.env.STRIPE_SECRET_KEY?.startsWith(prefix));
+}
+
+function stripeConfigurationReady(includeWebhook = false) {
+  return Boolean(stripeKeyReady() &&
     process.env.STRIPE_PRICE_ID?.startsWith("price_") &&
     (!includeWebhook || process.env.STRIPE_WEBHOOK_SECRET?.startsWith("whsec_")));
 }
 
-async function stripeRequest(endpoint, { method = "GET", params } = {}) {
-  const response = await fetch("https://api.stripe.com/v1/" + endpoint, {
-    method,
-    headers: {
-      Authorization: "Bearer " + process.env.STRIPE_SECRET_KEY,
-      ...(params ? { "Content-Type": "application/x-www-form-urlencoded" } : {})
-    },
-    ...(params ? { body: params.toString() } : {})
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(result?.error?.message || "No se ha podido conectar con Stripe.");
-    error.status = response.status;
-    throw error;
+function stripeClient() {
+  if (!stripeKeyReady()) throw new Error("Stripe no está configurado para el entorno seleccionado.");
+  if (!stripeClientInstance || stripeClientKey !== process.env.STRIPE_SECRET_KEY) {
+    stripeClientInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
+    stripeClientKey = process.env.STRIPE_SECRET_KEY;
   }
-  return result;
+  return stripeClientInstance;
+}
+
+function planForStripeMode(appMetadata, mode) {
+  if (!mode) return "free";
+  const modePlan = appMetadata[`stripe_${mode}_plan`];
+  if (modePlan === "pro" || modePlan === "free") return modePlan;
+  // Compatibility for existing test subscriptions written before mode-specific plan metadata.
+  if (mode === "test" && appMetadata.plan === "pro") return "pro";
+  return "free";
+}
+
+function stripeCustomerForMode(appMetadata, mode) {
+  if (!mode) return null;
+  const modeCustomerId = appMetadata[`stripe_${mode}_customer_id`];
+  if (modeCustomerId) return modeCustomerId;
+  // Existing records contain test-mode IDs; never reuse them with live credentials.
+  if (mode === "test") return appMetadata.stripe_customer_id || null;
+  return null;
 }
 
 app.post("/api/billing/checkout", async (req, res) => {
   try {
-    if (!stripeTestConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return res.status(503).json({ error: "La suscripción de prueba aún no está configurada completamente." });
+    if (!stripeConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(503).json({ error: "La suscripción no está configurada completamente para el modo seleccionado." });
     }
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY) {
       return res.status(503).json({ error: "El inicio de sesión no está configurado." });
@@ -158,61 +181,61 @@ app.post("/api/billing/checkout", async (req, res) => {
     if (!identity.userId || !identity.email) return res.status(401).json({ error: "Inicia sesión antes de mejorar a Pro." });
     if (identity.plan === "pro") return res.status(409).json({ error: "Tu cuenta ya tiene el plan Pro." });
     const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://mi-web-ej4w.onrender.com";
-    const params = new URLSearchParams({
+    const integrationSuffix = Array.from({ length: 8 }, () => "abcdefghijklmnopqrstuvwxyz"[crypto.randomInt(26)]).join("");
+    const session = await stripeClient().checkout.sessions.create({
       mode: "subscription",
-      "line_items[0][price]": process.env.STRIPE_PRICE_ID,
-      "line_items[0][quantity]": "1",
+      line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
       customer_email: identity.email,
       client_reference_id: identity.userId,
-      "metadata[supabase_user_id]": identity.userId,
-      "subscription_data[metadata][supabase_user_id]": identity.userId,
-      "subscription_data[metadata][app_product]": "numelio_pro",
+      metadata: { supabase_user_id: identity.userId, app_product: "numelio_pro" },
+      subscription_data: { metadata: { supabase_user_id: identity.userId, app_product: "numelio_pro" } },
       success_url: origin + "/mi-espacio.html?subscription=success",
-      cancel_url: origin + "/mi-espacio.html?subscription=cancelled"
+      cancel_url: origin + "/mi-espacio.html?subscription=cancelled",
+      integration_identifier: "numelio_pro_" + integrationSuffix
     });
-    const session = await stripeRequest("checkout/sessions", { method: "POST", params });
     if (!session.url) throw new Error("Stripe no devolvió el enlace seguro de pago.");
     res.json({ url: session.url });
   } catch (error) {
-    console.error("No se pudo iniciar el checkout de Stripe:", error.status || "error de conexión");
-    res.status(error.status === 401 ? 401 : 502).json({ error: "No se ha podido abrir el pago seguro. Inténtalo más tarde." });
+    console.error("No se pudo iniciar el checkout de Stripe:", error.statusCode || "error de conexión");
+    res.status(error.statusCode === 401 ? 401 : 502).json({ error: "No se ha podido abrir el pago seguro. Inténtalo más tarde." });
+  }
+});
+
+app.get("/api/billing/status", async (req, res) => {
+  try {
+    const identity = await identifyRequester(req);
+    if (!identity.userId) return res.status(401).json({ error: "Inicia sesión para consultar tu suscripción." });
+    res.json({
+      mode: stripeMode(),
+      checkoutReady: stripeConfigurationReady(true) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      portalReady: stripeKeyReady(),
+      plan: identity.plan
+    });
+  } catch (error) {
+    res.status(error.status || 503).json({ error: error.status ? error.message : "No se ha podido consultar la suscripción." });
   }
 });
 
 app.post("/api/billing/portal", async (req, res) => {
   try {
-    if (!stripeTestConfigurationReady()) return res.status(503).json({ error: "La gestión de suscripciones de prueba aún no está configurada." });
+    if (!stripeKeyReady()) return res.status(503).json({ error: "La gestión de suscripciones no está configurada para el modo seleccionado." });
     const identity = await identifyRequester(req);
-    if (!identity.userId || !identity.appMetadata?.stripe_customer_id) {
+    const customerId = stripeCustomerForMode(identity.appMetadata || {}, stripeMode());
+    if (!identity.userId || !customerId) {
       return res.status(404).json({ error: "No se encontró una suscripción para esta cuenta." });
     }
     const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://mi-web-ej4w.onrender.com";
-    const params = new URLSearchParams({
-      customer: identity.appMetadata.stripe_customer_id,
+    const session = await stripeClient().billingPortal.sessions.create({
+      customer: customerId,
       return_url: origin + "/mi-espacio.html"
     });
-    const session = await stripeRequest("billing_portal/sessions", { method: "POST", params });
     if (!session.url) throw new Error("Stripe no devolvió el enlace del portal.");
     res.json({ url: session.url });
   } catch (error) {
-    console.error("No se pudo abrir el portal de Stripe:", error.status || "error de conexión");
-    res.status(error.status === 401 ? 401 : 502).json({ error: "No se ha podido abrir la gestión de la suscripción." });
+    console.error("No se pudo abrir el portal de Stripe:", error.statusCode || "error de conexión");
+    res.status(error.statusCode === 401 ? 401 : 502).json({ error: "No se ha podido abrir la gestión de la suscripción." });
   }
 });
-
-function verifyStripeWebhook(rawBody, signatureHeader) {
-  if (!rawBody || !signatureHeader || !process.env.STRIPE_WEBHOOK_SECRET) return false;
-  const parts = signatureHeader.split(",").map(part => part.split("="));
-  const timestamp = Number(parts.find(([key]) => key === "t")?.[1]);
-  const signatures = parts.filter(([key]) => key === "v1").map(([, value]) => value);
-  if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300 || !signatures.length) return false;
-  const expected = crypto.createHmac("sha256", process.env.STRIPE_WEBHOOK_SECRET)
-    .update(String(timestamp) + ".").update(rawBody).digest();
-  return signatures.some(value => {
-    const received = Buffer.from(value, "hex");
-    return received.length === expected.length && crypto.timingSafeEqual(received, expected);
-  });
-}
 
 async function setSupabaseSubscription(userId, subscription, customerId) {
   if (!userId || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -227,19 +250,27 @@ async function setSupabaseSubscription(userId, subscription, customerId) {
   const currentResponse = await fetch(base, { headers });
   if (!currentResponse.ok) throw new Error("Supabase no ha podido leer la cuenta del usuario.");
   const current = await currentResponse.json();
-  if (current.app_metadata?.stripe_subscription_id &&
-      current.app_metadata.stripe_subscription_id !== subscription?.id &&
+  const mode = stripeMode();
+  if (!mode) throw new Error("El modo de Stripe no es válido.");
+  const metadata = current.app_metadata || {};
+  const prefix = "stripe_" + mode;
+  const customerKey = prefix + "_customer_id";
+  const subscriptionKey = prefix + "_subscription_id";
+  const oldSubscriptionId = metadata[subscriptionKey] ||
+    (mode === "test" && !metadata.stripe_test_plan ? metadata.stripe_subscription_id : null);
+  if (oldSubscriptionId && oldSubscriptionId !== subscription?.id &&
       subscription?.status !== "active") return;
   const isMatchingPaidSubscription = subscription?.status === "active" &&
     subscription?.metadata?.supabase_user_id === userId &&
     subscription?.items?.data?.some(item => item.price?.id === process.env.STRIPE_PRICE_ID);
   const stripeCustomerId = typeof customerId === "string" ? customerId : customerId?.id;
   const appMetadata = {
-    ...(current.app_metadata || {}),
-    plan: isMatchingPaidSubscription ? "pro" : "free",
-    stripe_customer_id: stripeCustomerId || subscription?.customer || current.app_metadata?.stripe_customer_id || null,
-    stripe_subscription_id: subscription?.id || null,
-    stripe_subscription_status: subscription?.status || "canceled"
+    ...metadata,
+    [prefix + "_plan"]: isMatchingPaidSubscription ? "pro" : "free",
+    [customerKey]: stripeCustomerId || subscription?.customer || metadata[customerKey] ||
+      (mode === "test" ? metadata.stripe_customer_id : null),
+    [subscriptionKey]: subscription?.id || null,
+    [prefix + "_subscription_status"]: subscription?.status || "canceled"
   };
   const updateResponse = await fetch(base, {
     method: "PUT", headers,
@@ -249,21 +280,23 @@ async function setSupabaseSubscription(userId, subscription, customerId) {
 }
 
 app.post("/api/stripe/webhook", async (req, res) => {
-  if (!stripeTestConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!stripeConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return res.status(503).send("Webhook no configurado.");
   }
-  if (!verifyStripeWebhook(req.rawBody, req.get("stripe-signature"))) {
+  let event;
+  try {
+    event = stripeClient().webhooks.constructEvent(req.rawBody, req.get("stripe-signature"), process.env.STRIPE_WEBHOOK_SECRET);
+  } catch {
     return res.status(400).send("Firma de Stripe no válida.");
   }
   try {
-    const event = JSON.parse(req.rawBody.toString("utf8"));
-    if (event.livemode !== false) return res.status(400).send("Este endpoint solo acepta eventos de prueba.");
+    if (event.livemode !== (stripeMode() === "live")) return res.status(400).send("El evento no corresponde al modo configurado.");
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const userId = session.client_reference_id;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
       if (!userId || !subscriptionId || session.mode !== "subscription") return res.sendStatus(200);
-      const subscription = await stripeRequest("subscriptions/" + encodeURIComponent(subscriptionId));
+      const subscription = await stripeClient().subscriptions.retrieve(subscriptionId);
       if (subscription.metadata?.supabase_user_id !== userId) return res.status(400).send("La cuenta no coincide.");
       await setSupabaseSubscription(userId, subscription, session.customer);
     } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) {
@@ -272,7 +305,7 @@ app.post("/api/stripe/webhook", async (req, res) => {
       if (!userId) return res.sendStatus(200);
       let subscription = snapshot;
       if (event.type !== "customer.subscription.deleted") {
-        subscription = await stripeRequest("subscriptions/" + encodeURIComponent(snapshot.id));
+        subscription = await stripeClient().subscriptions.retrieve(snapshot.id);
       }
       if (subscription.metadata?.supabase_user_id !== userId) return res.status(400).send("La cuenta no coincide.");
       await setSupabaseSubscription(userId, subscription, subscription.customer);
@@ -281,14 +314,14 @@ app.post("/api/stripe/webhook", async (req, res) => {
       const relatedSubscription = invoice.subscription || invoice.parent?.subscription_details?.subscription;
       const subscriptionId = typeof relatedSubscription === "string" ? relatedSubscription : relatedSubscription?.id;
       if (!subscriptionId) return res.sendStatus(200);
-      const subscription = await stripeRequest("subscriptions/" + encodeURIComponent(subscriptionId));
+      const subscription = await stripeClient().subscriptions.retrieve(subscriptionId);
       const userId = subscription.metadata?.supabase_user_id;
       if (!userId) return res.sendStatus(200);
       await setSupabaseSubscription(userId, subscription, subscription.customer);
     }
     res.sendStatus(200);
   } catch (error) {
-    console.error("No se pudo procesar el webhook de Stripe:", error?.message || "Error desconocido");
+    console.error("No se pudo procesar el webhook de Stripe:", error.statusCode || error.type || "Error desconocido");
     res.status(500).send("No se pudo sincronizar la suscripción.");
   }
 });

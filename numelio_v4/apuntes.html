@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="es">
 <head>
+<link rel="canonical" href="https://mi-web-ej4w.onrender.com/apuntes.html">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mis apuntes — Numelio</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
   <style>
     .notes-page{max-width:1000px;margin:auto;padding:42px 22px 80px}
     .notes-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
@@ -63,7 +64,7 @@
     <p class="notes-status" id="notesStatus" role="status" aria-live="polite">Comprobando tu sesión…</p>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/js/supabase.js"></script>
+  <script src="js/supabase.js"></script>
   <script>
     const sb = window.numelioSupabase;
     const form = document.getElementById("noteForm");
@@ -274,5 +275,6 @@
     }
     init();
   </script>
+<footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
 </body>
 </html>

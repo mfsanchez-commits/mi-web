@@ -486,8 +486,19 @@ footer {
     gap: 10px;
   }
 
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar nav {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px 12px;
+  }
+
   nav > a:not(.login-link) {
-    display: none;
+    display: inline-flex;
   }
 
   .login-link {

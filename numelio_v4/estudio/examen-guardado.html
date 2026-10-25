@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
+<link rel="canonical" href="https://mi-web-ej4w.onrender.com/estudio/examen-guardado.html">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Examen desde mis apuntes — Numelio</title><link rel="stylesheet" href="../css/style.css">
 <style>
@@ -66,7 +67,7 @@ generateBtn.addEventListener("click",async()=>{
   if((note.contenido||"").trim())fd.append("notesText",note.contenido);
   fd.append("subject",document.getElementById("subject").value);fd.append("count",document.getElementById("count").value);fd.append("difficulty",document.getElementById("difficulty").value);
   statusEl.textContent="La IA está leyendo tus apuntes y creando las preguntas…";
-  const r=await fetch("/api/generate-exam",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||"No se ha podido generar el examen.");
+  const sessionResult=await sb.auth.getSession();const authHeaders=sessionResult.data.session?{Authorization:"Bearer "+sessionResult.data.session.access_token}:{};const r=await fetch("/api/generate-exam",{method:"POST",headers:authHeaders,body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||"No se ha podido generar el examen.");
   currentExam=data;renderExam(data);statusEl.textContent="Examen generado a partir de tus apuntes. ¡A practicar!";
  }catch(e){statusEl.textContent="No se ha podido generar el examen: "+(e.message||"Error desconocido");}
  finally{generateBtn.disabled=false;generateBtn.textContent="✨ Generar examen";}
@@ -79,10 +80,11 @@ async function grade(){
  const answers=currentExam.questions.map((q,i)=>q.type==="choice"?Number(document.querySelector("input[name='q"+i+"']:checked")?.value??-1):document.getElementById("a"+i)?.value||"");
  const btn=document.getElementById("finishBtn");btn.disabled=true;btn.textContent="Corrigiendo…";
  try{
-  const r=await fetch("/api/grade-exam",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({subject:document.getElementById("subject").value,questions:currentExam.questions,answers})});
+  const sessionResult=await sb.auth.getSession();const authHeaders={"Content-Type":"application/json",...(sessionResult.data.session?{Authorization:"Bearer "+sessionResult.data.session.access_token}:{})};const r=await fetch("/api/grade-exam",{method:"POST",headers:authHeaders,body:JSON.stringify({subject:document.getElementById("subject").value,questions:currentExam.questions,answers})});
   const data=await r.json();if(!r.ok)throw new Error(data.error||"Error al corregir");
   document.getElementById("score").innerHTML="<div class='score'><h2>Nota: "+esc(data.score)+"/10</h2><p>"+esc(data.correct)+"/"+esc(data.total)+" preguntas correctas.</p><p>"+esc(data.summary||"Revisa las correcciones para seguir mejorando.")+"</p><details><summary>Ver correcciones</summary>"+(data.results||[]).map(x=>"<div style='padding:12px 0;border-bottom:1px solid var(--line)'><b>"+(x.correct?"✅ Correcta":"❌ Para revisar")+" · Pregunta "+(Number(x.index)+1)+"</b><p>"+esc(x.feedback)+"</p>"+(x.expected?"<small><b>Respuesta esperada:</b> "+esc(x.expected)+"</small>":"")+"</div>").join("")+"</details></div>";btn.remove();
  }catch(e){document.getElementById("score").textContent="No se ha podido corregir: "+e.message;btn.disabled=false;btn.textContent="✓ Terminar y corregir";}
 }
 init();
-</script></body></html>
+</script><footer class="site-footer">✦ Numelio · <a href="../politica-privacidad.html">Privacidad</a> · <a href="../aviso-legal.html">Aviso legal</a> · <a href="../politica-cookies.html">Cookies</a></footer>
+</body></html>

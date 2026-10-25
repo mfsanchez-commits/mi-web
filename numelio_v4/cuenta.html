@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="es">
 <head>
+<link rel="canonical" href="https://mi-web-ej4w.onrender.com/cuenta.html">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Acceder a Numelio</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
   <style>
     .auth-container {
       max-width: 440px;
@@ -65,6 +66,9 @@
 
       <button type="submit" id="loginBtn">Iniciar sesión</button>
       <button type="button" id="signupBtn">Crear cuenta</button>
+      <button type="button" id="forgotBtn">He olvidado mi contraseña</button>
+      <button type="button" id="updatePasswordBtn" hidden>Guardar nueva contraseña</button>
+      <p style="font-size:12px">La autenticación la gestiona Supabase; Numelio no guarda contraseñas en texto plano.</p>
       <button type="button" id="logoutBtn" hidden>Cerrar sesión</button>
       <p id="authMessage" role="status" aria-live="polite"></p>
     </form>
@@ -73,12 +77,25 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/js/supabase.js"></script>
+  <script src="js/supabase.js"></script>
   <script>
     const form = document.getElementById("authForm");
     const message = document.getElementById("authMessage");
     const loginBtn = document.getElementById("loginBtn");
     const signupBtn = document.getElementById("signupBtn");
+    const forgotBtn = document.getElementById("forgotBtn");
+    const updatePasswordBtn = document.getElementById("updatePasswordBtn");
+    const passwordLabel = document.querySelector('label[for="password"]');
+    const resetMode = new URLSearchParams(window.location.search).get("reset") === "1";
+    if (resetMode) {
+      passwordLabel.textContent = "Nueva contraseña";
+      document.getElementById("password").setAttribute("autocomplete", "new-password");
+      loginBtn.hidden = true;
+      signupBtn.hidden = true;
+      forgotBtn.hidden = true;
+      updatePasswordBtn.hidden = false;
+      message.textContent = "Escribe una nueva contraseña de al menos 8 caracteres.";
+    }
 
     function getClient() {
       if (window.supabaseClient) return window.supabaseClient;
@@ -132,7 +149,50 @@
 
     form.addEventListener("submit", async event => {
       event.preventDefault();
+      if (resetMode) { updatePasswordBtn.click(); return; }
       await authenticate("login");
+    });
+
+    forgotBtn.addEventListener("click", async () => {
+      const client = getClient();
+      const email = document.getElementById("email").value.trim();
+      if (!email) {
+        message.textContent = "Escribe primero tu correo electrónico y vuelve a pulsar este botón.";
+        document.getElementById("email").focus();
+        return;
+      }
+      if (!client) { message.textContent = "No se ha podido cargar el servicio de cuentas."; return; }
+      forgotBtn.disabled = true;
+      message.textContent = "Enviando instrucciones de recuperación…";
+      try {
+        const { error } = await client.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + "/cuenta.html?reset=1"
+        });
+        if (error) throw error;
+        message.textContent = "Si existe una cuenta con ese correo, recibirás un enlace para cambiar la contraseña. Revisa también el correo no deseado.";
+      } catch (error) {
+        message.textContent = "No se ha podido enviar el correo de recuperación. Comprueba la dirección e inténtalo de nuevo.";
+      } finally { forgotBtn.disabled = false; }
+    });
+
+    updatePasswordBtn.addEventListener("click", async () => {
+      const client = getClient();
+      const password = document.getElementById("password").value;
+      if (password.length < 8) { message.textContent = "La nueva contraseña debe tener al menos 8 caracteres."; return; }
+      updatePasswordBtn.disabled = true;
+      message.textContent = "Actualizando contraseña…";
+      try {
+        const { error } = await client.auth.updateUser({ password });
+        if (error) throw error;
+        message.textContent = "Contraseña actualizada. Ya puedes seguir usando Numelio.";
+        updatePasswordBtn.hidden = true;
+        loginBtn.hidden = false;
+        passwordLabel.textContent = "Contraseña";
+        document.getElementById("password").value = "";
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch (error) {
+        message.textContent = "El enlace de recuperación puede haber caducado. Solicita uno nuevo e inténtalo otra vez.";
+      } finally { updatePasswordBtn.disabled = false; }
     });
 
     signupBtn.addEventListener("click", async () => {
@@ -147,7 +207,9 @@
       logoutBtn.hidden = !loggedIn;
       loginBtn.hidden = loggedIn;
       signupBtn.hidden = loggedIn;
-      if (loggedIn) {
+      if (loggedIn && resetMode) {
+        message.textContent = "Sesión de recuperación activa. Escribe tu nueva contraseña y guárdala.";
+      } else if (loggedIn) {
         message.textContent = "Sesión iniciada como " + session.user.email + ". Abriendo tu espacio…";
         window.location.replace("mi-espacio.html");
       }
@@ -163,5 +225,6 @@
       message.textContent = "Has cerrado sesión.";
     });
   </script>
+<footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
 </body>
 </html>

@@ -33,6 +33,8 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 values ('archivos-apuntes', 'archivos-apuntes', false, 10485760, array['application/pdf','image/jpeg','image/png','image/webp'])
 on conflict (id) do update set public=false, file_size_limit=10485760, allowed_mime_types=array['application/pdf','image/jpeg','image/png','image/webp'];
 
+-- Eliminar la política antigua duplicada si quedó de una configuración anterior.
+drop policy if exists "Usuarios gestionan sus propios archivos" on storage.objects;
 drop policy if exists "Cada usuario gestiona sus archivos de apuntes" on storage.objects;
 create policy "Cada usuario gestiona sus archivos de apuntes" on storage.objects for all to authenticated
 using (bucket_id = 'archivos-apuntes' and (storage.foldername(name))[1] = (select auth.uid())::text)

@@ -30,7 +30,7 @@
 <header class="topbar"><a class="brand" href="index.html">✦ Numelio</a><nav><a href="mi-espacio.html">Mi espacio</a><a href="index.html">Inicio</a><button id="themeBtn" type="button" aria-label="Cambiar tema">☾</button></nav></header>
 <main class="tutor-page">
   <div class="tutor-heading"><span class="eyebrow">TU PROFESOR PARTICULAR</span><h1>¿Qué duda tienes?</h1><p>Pregunta lo que quieras de tus asignaturas. Te lo explico paso a paso, te pongo ejemplos y puedes hablar en lugar de escribir. También puedes escuchar mis respuestas.</p></div>
-  <div class="tutor-toolbar"><label for="subject">Asignatura</label><select id="subject"><option>General</option><option>Matemáticas</option><option>Física y Química</option><option>Biología y Geología</option><option>Geografía e Historia</option><option>Lengua Castellana</option><option>Francés</option><option>Inglés</option><option>Tecnología</option><option>Otra</option></select><label style="display:flex;align-items:center;gap:7px;font-weight:500"><input id="autoRead" type="checkbox"> Leer respuestas automáticamente</label><button class="btn" id="clearChat" type="button">Nueva conversación</button></div>
+  <div class="tutor-toolbar"><label for="subject">Asignatura</label><select id="subject"><option>General</option><option>Matemáticas</option><option>Física y Química</option><option>Biología y Geología</option><option>Geografía e Historia</option><option>Lengua Castellana</option><option>Francés</option><option>Inglés</option><option>Tecnología</option><option>Otra</option></select><label for="studyNote">Usar mis apuntes</label><select id="studyNote"><option value="">No usar apuntes</option></select><label style="display:flex;align-items:center;gap:7px;font-weight:500"><input id="autoRead" type="checkbox"> Leer respuestas automáticamente</label><button class="btn" id="clearChat" type="button">Nueva conversación</button></div><p class="tutor-status" id="notesStatus">Puedes elegir un apunte de texto para que el profesor tenga ese contexto. Los archivos adjuntos sin texto extraído no se incluirán todavía.</p>
   <section class="tutor-panel" aria-label="Conversación con el profesor IA">
     <div class="tutor-messages" id="messages" aria-live="polite" aria-label="Mensajes">
       <div class="tutor-message assistant">¡Hola! Soy tu profesor de Numelio. Cuéntame qué estás estudiando o qué ejercicio no entiendes. Podemos resolverlo juntos paso a paso.</div>
@@ -54,6 +54,8 @@ if(savedTheme==="dark")document.documentElement.classList.add("dark");
 $("themeBtn").onclick=()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("numelio-theme",document.documentElement.classList.contains("dark")?"dark":"light");};
 let messages=[],recognition=null,recording=false,busy=false;
 let userKey="guest";
+const notesById=new Map();
+$("studyNote").addEventListener("change",()=>{const note=notesById.get($("studyNote").value);if(note){const options=[...$("subject").options].map(option=>option.value);if(options.includes(note.asignatura))$("subject").value=note.asignatura;}});
 $("autoRead").checked=localStorage.getItem("numelio-tutor-auto-read")==="true";
 $("autoRead").addEventListener("change",()=>localStorage.setItem("numelio-tutor-auto-read",$("autoRead").checked?"true":"false"));
 function storageKey(){return "numelio-tutor-chat:"+userKey;}
@@ -71,11 +73,24 @@ function renderMessage(message){
 function renderAll(){ $("messages").replaceChildren();if(!messages.length)messages=[{role:"assistant",content:"¡Hola! Soy tu profesor de Numelio. Cuéntame qué estás estudiando o qué ejercicio no entiendes. Podemos resolverlo juntos paso a paso."}];messages.forEach(renderMessage);$("messages").scrollTop=$("messages").scrollHeight;}
 function setStatus(text){$("status").textContent=text;}
 function speakText(text){if(!("speechSynthesis" in window)){setStatus("Tu navegador no admite lectura en voz alta.");return;}speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang="es-ES";utterance.rate=.96;utterance.onstart=()=>setStatus("Leyendo la respuesta en voz alta…");utterance.onend=()=>setStatus("Puedes seguir preguntando o escuchar otra respuesta.");speechSynthesis.speak(utterance);}
+async function loadSavedNotes(userId){
+ const select=$("studyNote");
+ const {data,error}=await sb.from("apuntes").select("id,titulo,asignatura,contenido,updated_at").eq("user_id",userId).order("updated_at",{ascending:false}).limit(30);
+ if(error){$("notesStatus").textContent="No se han podido cargar tus apuntes. El chat sigue disponible sin ellos.";return;}
+ const usable=(data||[]).filter(note=>typeof note.contenido==="string"&&note.contenido.trim());
+ for(const note of usable){
+  notesById.set(note.id,note);
+  const option=document.createElement("option");option.value=note.id;option.textContent=(note.asignatura?note.asignatura+" · ":"")+note.titulo;select.append(option);
+ }
+ if(!usable.length)$("notesStatus").textContent="Todavía no tienes apuntes de texto guardados. Puedes guardar texto en «Mis apuntes» y seleccionarlo aquí. Los PDF/fotos adjuntos no se incorporan al chat todavía.";
+ else $("notesStatus").textContent="Puedes elegir uno de tus apuntes de texto. El profesor lo tratará como material de estudio, no como instrucciones.";
+}
 async function init(){
  if(!sb){setStatus("No se ha podido cargar la cuenta. Recarga la página.");$("send").disabled=true;return;}
  const {data,error}=await sb.auth.getSession();
  if(error||!data.session){location.replace("cuenta.html");return;}
  userKey=data.session.user.id;
+ await loadSavedNotes(userKey);
  try{const old=JSON.parse(localStorage.getItem(storageKey())||"[]");if(Array.isArray(old))messages=old.filter(m=>m&&["user","assistant"].includes(m.role)&&typeof m.content==="string").slice(-40);}catch{}
  renderAll();setStatus("Sesión activa. Tu conversación se guarda en este dispositivo.");
 }
@@ -87,7 +102,7 @@ $("chatForm").addEventListener("submit",async event=>{
  busy=true;$("send").disabled=true;setStatus("Tu profesor está pensando…");
  try{
   const session=await sb.auth.getSession();if(!session.data.session)throw new Error("Tu sesión ha caducado. Vuelve a iniciar sesión.");
-  const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.data.session.access_token},body:JSON.stringify({subject:$("subject").value,messages:messages.slice(-16)})});
+  const response=await fetch("/api/tutor-chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.data.session.access_token},body:JSON.stringify({subject:$("subject").value,messages:messages.slice(-16),studyContext:(()=>{const note=notesById.get($("studyNote").value);return note?("Asignatura: "+note.asignatura+"\nTítulo: "+note.titulo+"\nContenido:\n"+note.contenido).slice(0,12000):"";})()})});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo obtener una respuesta.");
   messages.push({role:"assistant",content:data.answer});messages=messages.slice(-40);saveChat();renderAll();setStatus("Respuesta lista. Puedes escucharla en voz alta.");if($("autoRead").checked)speakText(data.answer);
  }catch(error){messages.pop();renderAll();saveChat();$("message").value=text;setStatus(error.message||"No se ha podido conectar con el profesor.");}

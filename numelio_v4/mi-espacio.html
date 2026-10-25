@@ -31,6 +31,20 @@
     .space-card p{margin:0 0 16px;font-size:14px}
     .space-card .eyebrow{display:inline-block;margin-top:4px}
     .recent-list{display:grid;gap:8px}
+    .recent-filters{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:10px;margin:14px 0}
+    .recent-filters input,.recent-filters select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+    .recent-links{display:flex;gap:8px;flex-wrap:wrap}
+    .progress-panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-top:24px}
+    .progress-bars{display:grid;gap:12px;margin-top:14px}
+    .progress-row{display:grid;grid-template-columns:minmax(110px,170px) minmax(0,1fr) 50px;gap:10px;align-items:center;font-size:13px}
+    .progress-track{height:9px;border-radius:99px;background:var(--line);overflow:hidden}
+    .progress-fill{height:100%;border-radius:99px;background:var(--primary);width:0}
+    .history-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+    .history-item:last-child{border-bottom:0}
+    .history-item strong{display:block}
+    .history-item small{display:block;color:var(--muted);margin-top:4px}
+    .history-score{font-size:19px;font-weight:800;white-space:nowrap}
+    @media(max-width:600px){.recent-filters{grid-template-columns:1fr}.progress-row{grid-template-columns:90px minmax(0,1fr) 42px;gap:7px}}
     .recent-item{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
     .recent-item:last-child{border-bottom:0}
     .recent-item strong{display:block;overflow-wrap:anywhere}
@@ -93,10 +107,10 @@
 
     <section class="recent-panel" aria-labelledby="recentTitle" style="margin-top:24px">
       <div class="space-section-heading" style="margin-top:0"><div><span class="eyebrow">ÚLTIMOS GUARDADOS</span><h2 id="recentTitle">Tus apuntes recientes</h2></div><a class="btn" href="apuntes.html">Ver todos →</a></div>
-      <div id="recentNotes" class="recent-list"><p>Consultando tus apuntes…</p></div>
+      <div class="recent-filters"><input id="noteSearch" type="search" placeholder="Buscar apuntes por título…" aria-label="Buscar apuntes por título"><select id="subjectFilter" aria-label="Filtrar por asignatura"><option value="">Todas las asignaturas</option><option>Matemáticas</option><option>Lengua</option><option>Física y Química</option><option>Biología</option><option>Geografía e Historia</option><option>Francés</option><option>Deporte</option><option>Religión</option><option>General</option><option>Otra</option></select></div><div id="recentNotes" class="recent-list"><p>Consultando tus apuntes…</p></div><p id="notesFilterStatus" class="space-note"></p>
     </section>
 
-    <p class="space-note" id="spaceMessage" role="status" aria-live="polite">Comprobando tu sesión…</p>
+    <section class="progress-panel" aria-labelledby="progressTitle"><div class="space-section-heading" style="margin-top:0"><div><span class="eyebrow">TU EVOLUCIÓN</span><h2 id="progressTitle">Progreso por asignatura</h2><p>Resumen basado en tus materiales guardados, no en notas inventadas.</p></div></div><div id="progressBars" class="progress-bars"><p class="space-note">Calculando…</p></div><p class="space-note">El historial de calificaciones se añadirá cuando esté configurado y validado.</p></section><p class="space-note" id="spaceMessage" role="status" aria-live="polite">Comprobando tu sesión…</p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -147,24 +161,57 @@
       if (!list.children.length) list.append(addText("p", "Todavía no tienes materiales guardados. Crea un apunte o genera tus primeras tarjetas."));
     }
 
+    let allNotes = [];
     function renderRecent(notes) {
       const list = document.getElementById("recentNotes");
       list.replaceChildren();
-      if (!notes.length) {
-        list.append(addText("p", "Aún no has guardado apuntes. Puedes crear el primero en «Mis apuntes»."));
+      const query = document.getElementById("noteSearch").value.trim().toLocaleLowerCase("es");
+      const subject = document.getElementById("subjectFilter").value;
+      const filtered = notes.filter(note => (!query || (note.titulo || "").toLocaleLowerCase("es").includes(query)) && (!subject || (note.asignatura || "General") === subject));
+      document.getElementById("notesFilterStatus").textContent = "Mostrando " + filtered.length + " de " + notes.length + " apuntes.";
+      if (!filtered.length) {
+        list.append(addText("p", notes.length ? "No hay apuntes que coincidan con esos filtros." : "Aún no has guardado apuntes. Puedes crear el primero en «Mis apuntes»."));
         return;
       }
-      for (const note of notes) {
+      for (const note of filtered) {
         const row = document.createElement("div");
         row.className = "recent-item";
         const info = document.createElement("div");
         info.append(addText("strong", note.titulo || "Apunte sin título"), addText("small", (note.asignatura || "General") + (note.updated_at ? " · Actualizado " + new Date(note.updated_at).toLocaleDateString("es-ES") : "")));
-        const link = document.createElement("a");
-        link.href = "apuntes.html";
-        link.className = "btn";
-        link.textContent = "Abrir apuntes";
-        row.append(info, link);
+        const links = document.createElement("div");
+        links.className = "recent-links";
+        const open = document.createElement("a");
+        open.href = "apuntes.html";
+        open.className = "btn";
+        open.textContent = "Ver apuntes";
+        const exam = document.createElement("a");
+        exam.href = "estudio/examen-guardado.html?id=" + encodeURIComponent(note.id);
+        exam.className = "btn primary";
+        exam.textContent = "Crear examen →";
+        links.append(open, exam);
+        row.append(info, links);
         list.append(row);
+      }
+    }
+    document.getElementById("noteSearch").addEventListener("input", () => renderRecent(allNotes));
+    document.getElementById("subjectFilter").addEventListener("change", () => renderRecent(allNotes));
+
+    function renderProgress(notes, sets) {
+      const counts = new Map();
+      for (const note of notes) { const key = note.asignatura || "General"; counts.set(key, (counts.get(key) || 0) + 1); }
+      for (const set of sets) { const key = set.asignatura || "General"; counts.set(key, (counts.get(key) || 0) + 1); }
+      const target = document.getElementById("progressBars");
+      target.replaceChildren();
+      const entries = [...counts.entries()].sort((a,b) => b[1]-a[1]).slice(0,6);
+      const max = Math.max(1, ...entries.map(entry => entry[1]));
+      if (!entries.length) { target.append(addText("p", "Guarda apuntes o tarjetas para empezar a ver tu organización por asignatura.")); return; }
+      for (const [subject, count] of entries) {
+        const row = document.createElement("div"); row.className = "progress-row";
+        row.append(addText("span", subject));
+        const track = document.createElement("div"); track.className = "progress-track";
+        const fill = document.createElement("div"); fill.className = "progress-fill"; fill.style.width = (count/max*100) + "%"; track.append(fill);
+        row.append(track, addText("strong", String(count)));
+        target.append(row);
       }
     }
 
@@ -180,11 +227,13 @@
       }
       const notes = notesResult.data || [];
       const sets = setsResult.data || [];
+      allNotes = notes;
       document.getElementById("notesTotal").textContent = notes.length;
       document.getElementById("setsTotal").textContent = sets.length;
       document.getElementById("cardsTotal").textContent = sets.reduce((total, set) => total + (Array.isArray(set.tarjetas) ? set.tarjetas.length : 0), 0);
       renderSubjects(notes, sets);
-      renderRecent(notes.slice(0, 5));
+      renderRecent(notes);
+      renderProgress(notes, sets);
       spaceMessage.textContent = "Sesión activa. El resumen muestra los apuntes y las tarjetas que tienes guardados; los resultados históricos de exámenes aún están pendientes.";
     }
 

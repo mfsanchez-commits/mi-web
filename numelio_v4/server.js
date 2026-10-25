@@ -182,8 +182,9 @@ function validateGradeExamRequest(req, res, next) {
     ["choice", "short"].includes(question.type) &&
     (question.type !== "choice" || (Array.isArray(question.options) && question.options.length === 4 &&
       question.options.every(option => typeof option === "string" && option.length <= 500))) &&
-    (typeof question.answer === "string" || typeof question.answer === "number") &&
-    String(question.answer).length <= 3000 &&
+    (question.type === "choice"
+      ? Number.isInteger(question.answer) && question.answer >= 0 && question.answer <= 3
+      : typeof question.answer === "string" && question.answer.length <= 3000) &&
     (!question.explanation || (typeof question.explanation === "string" && question.explanation.length <= 1500))
   );
   const validAnswers = answers.every(answer =>

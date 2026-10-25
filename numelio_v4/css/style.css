@@ -530,3 +530,130 @@ footer {
 }
 
 
+
+
+/* Portada reorganizada: misma funcionalidad, jerarquía visual más clara */
+.welcome {
+  padding-top: 62px;
+  padding-bottom: 58px;
+  gap: clamp(28px, 5vw, 64px);
+}
+.welcome h1 {
+  max-width: 720px;
+  font-size: clamp(42px, 5.5vw, 66px);
+  line-height: 1.03;
+  letter-spacing: -2.7px;
+}
+.welcome .hero-content > p {
+  max-width: 610px;
+}
+.welcome .welcome-note {
+  font-size: 14px;
+  margin-top: 20px;
+}
+.welcome-panel {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.welcome-action {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 13px;
+  padding: 19px 16px;
+  border-radius: 15px;
+  transition: background .18s, transform .18s;
+}
+.welcome-action + .welcome-action {
+  border-top: 1px solid var(--line);
+}
+.welcome-action:hover {
+  background: var(--bg);
+  transform: translateX(2px);
+}
+.action-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--bg);
+  font-size: 23px;
+}
+.welcome-action b {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 16px;
+}
+.welcome-action small {
+  display: block;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 13px;
+}
+.action-arrow {
+  color: var(--primary);
+  font-size: 18px;
+}
+.tools-section {
+  padding-top: 26px;
+}
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 26px;
+}
+.section-heading h2 {
+  margin-bottom: 8px;
+}
+.section-intro {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.section-heading .search {
+  flex: 0 1 330px;
+  margin: 0 0 4px;
+}
+.no-results {
+  color: var(--muted);
+  padding: 20px 0;
+}
+@media (max-width: 800px) {
+  .welcome {
+    padding-top: 48px;
+    padding-bottom: 40px;
+  }
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .section-heading .search {
+    flex-basis: auto;
+    max-width: none;
+  }
+}
+@media (max-width: 520px) {
+  .welcome h1 {
+    letter-spacing: -1.7px;
+  }
+  .welcome-action {
+    grid-template-columns: 42px minmax(0, 1fr) 16px;
+    gap: 10px;
+    padding: 16px 9px;
+  }
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  .welcome-action b {
+    font-size: 15px;
+  }
+}

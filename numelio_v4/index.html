@@ -2,95 +2,128 @@
 <html lang="es">
 <head>
 <link rel="canonical" href="https://mi-web-ej4w.onrender.com/index.html">
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Numelio — Calculadoras y herramientas de estudio</title>
-<meta name="description" content="Calculadoras online y herramientas para estudiar mejor.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Numelio — Tu espacio para estudiar mejor</title>
+<meta name="description" content="Pregunta al profesor IA, practica con exámenes y utiliza herramientas de estudio en Numelio.">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header class="topbar"><a class="brand" href="index.html">✦ Numelio</a>
-<nav><a href="#herramientas">Herramientas</a><a href="estudio/examen.html">Crear examen</a><button id="themeBtn">☾</button><a href="cuenta.html" class="login-link">Iniciar sesión</a></nav></header>
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="Numelio, inicio">✦ Numelio</a>
+  <nav aria-label="Navegación principal">
+    <a href="index.html" aria-current="page">Inicio</a>
+    <a href="profesor.html">Profesor IA</a>
+    <a href="estudio/examen.html">Practicar</a>
+    <a href="#herramientas">Herramientas</a>
+    <button id="themeBtn" type="button" aria-label="Cambiar tema" title="Cambiar tema">☾</button>
+    <a href="cuenta.html" class="login-link">Mi espacio / Entrar</a>
+  </nav>
+</header>
+
 <main>
-
-<section class="hero">
-  <div class="hero-content">
-    <span class="eyebrow">ESTUDIA · CALCULA · PRACTICA</span>
-    <h1>Todo para <span>estudiar mejor.</span></h1>
-    <p>Calculadoras útiles y una zona de estudio donde podrás convertir tus apuntes en exámenes de práctica.</p>
-
-    <div class="hero-buttons">
-      <a class="btn primary" href="#herramientas">Ver herramientas</a>
-      <a class="btn" href="estudio/examen.html">Crear examen →</a>
-      <a class="btn space-link" href="cuenta.html">Mi espacio</a>
-      <a class="btn" href="profesor.html">💬 Pregunta al profesor IA</a>
+  <section class="hero welcome">
+    <div class="hero-content">
+      <span class="eyebrow">TU ESPACIO DE ESTUDIO</span>
+      <h1>Aprende a tu ritmo.<br><span>Entiende de verdad.</span></h1>
+      <p>Pregunta tus dudas, practica para los exámenes y utiliza herramientas útiles. Numelio te acompaña en distintas asignaturas, no solo en Matemáticas.</p>
+      <div class="hero-buttons">
+        <a class="btn primary" href="profesor.html">💬 Preguntar al profesor</a>
+        <a class="btn" href="estudio/examen.html">📝 Crear examen</a>
+      </div>
+      <p class="welcome-note">¿No sabes por dónde empezar? Elige una opción y continúa desde ahí.</p>
     </div>
-  </div>
+    <div class="welcome-panel" aria-label="Qué puedes hacer en Numelio">
+      <a class="welcome-action" href="profesor.html">
+        <span class="action-icon">💬</span>
+        <span><b>Resolver una duda</b><small>Explicaciones paso a paso para tus asignaturas.</small></span>
+        <span class="action-arrow" aria-hidden="true">↗</span>
+      </a>
+      <a class="welcome-action" href="estudio/examen.html">
+        <span class="action-icon">📝</span>
+        <span><b>Preparar un examen</b><small>Practica con preguntas a partir de tus apuntes.</small></span>
+        <span class="action-arrow" aria-hidden="true">↗</span>
+      </a>
+      <a class="welcome-action" href="cuenta.html">
+        <span class="action-icon">📚</span>
+        <span><b>Mi espacio</b><small>Entra o crea tu cuenta para acceder a tu espacio personal.</small></span>
+        <span class="action-arrow" aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </section>
 
-  <div class="hero-panel">
-    <div>🧮 <b>Calculadoras</b><small>Resultados al instante</small></div>
-    <div>📚 <b>Tus apuntes</b><small>Prepáralos para practicar</small></div>
-    <div>📝 <b>Exámenes</b><small>Practica antes del examen real</small></div>
-  </div>
-</section>
+  <section class="section tools-section" id="herramientas">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">HERRAMIENTAS DE ESTUDIO</span>
+        <h2>¿Qué necesitas hacer?</h2>
+        <p class="section-intro">Busca una herramienta o entra directamente en la que necesitas.</p>
+      </div>
+      <input id="search" class="search" type="search" aria-label="Buscar herramienta" placeholder="Buscar herramienta…">
+    </div>
 
-<section id="herramientas" class="section">
-  <span class="eyebrow">HERRAMIENTAS</span>
-  <h2>Empieza por aquí</h2>
+    <div class="grid">
+      <a class="card" data-name="porcentajes" href="matematicas/porcentajes.html">
+        <i>％</i>
+        <h3>Porcentajes</h3>
+        <p>Calcula porcentajes, aumentos y reducciones.</p>
+      </a>
+      <a class="card" data-name="fracciones" href="matematicas/fracciones.html">
+        <i>½</i>
+        <h3>Fracciones</h3>
+        <p>Opera y simplifica fracciones.</p>
+      </a>
+      <a class="card" data-name="regla tres" href="matematicas/regla-de-tres.html">
+        <i>ⅹ</i>
+        <h3>Regla de tres</h3>
+        <p>Resuelve reglas de tres paso a paso.</p>
+      </a>
+      <a class="card" data-name="descuentos" href="matematicas/descuentos.html">
+        <i>€</i>
+        <h3>Descuentos</h3>
+        <p>Calcula el precio final y cuánto ahorras.</p>
+      </a>
+      <a class="card" data-name="iva" href="matematicas/iva.html">
+        <i>＋</i>
+        <h3>IVA</h3>
+        <p>Calcula precios con o sin IVA.</p>
+      </a>
+      <a class="card featured" data-name="profesor ia chat voz dudas preguntas asignaturas historia lengua matematicas quimica" href="profesor.html">
+        <i>💬</i>
+        <h3>Profesor IA</h3>
+        <p>Pregunta sobre distintas asignaturas. Pide ejemplos y explicaciones paso a paso.</p>
+        <b>CHAT + VOZ</b>
+      </a>
+      <a class="card featured" data-name="examen apuntes estudiar practicar preguntas" href="estudio/examen.html">
+        <i>📝</i>
+        <h3>Crear examen</h3>
+        <p>Prepara preguntas para practicar antes del examen real.</p>
+      </a>
+    </div>
+    <p id="noResults" class="no-results" hidden>No hay herramientas que coincidan con esa búsqueda. Prueba con otra palabra.</p>
+  </section>
 
-  <input id="search" class="search" placeholder="Buscar herramienta...">
-
-  <div class="grid">
-    <a class="card" data-name="porcentajes" href="matematicas/porcentajes.html">
-      <i>％</i>
-      <h3>Porcentajes</h3>
-      <p>Calcula porcentajes, aumentos y reducciones.</p>
-    </a>
-
-    <a class="card" data-name="fracciones" href="matematicas/fracciones.html">
-      <i>½</i>
-      <h3>Fracciones</h3>
-      <p>Opera y simplifica fracciones.</p>
-    </a>
-
-    <a class="card" data-name="regla tres" href="matematicas/regla-de-tres.html">
-      <i>ⅹ</i>
-      <h3>Regla de tres</h3>
-      <p>Resuelve reglas de tres.</p>
-    </a>
-
-    <a class="card" data-name="descuentos" href="matematicas/descuentos.html">
-      <i>€</i>
-      <h3>Descuentos</h3>
-      <p>Calcula precio final y ahorro.</p>
-    </a>
-
-    <a class="card" data-name="iva" href="matematicas/iva.html">
-      <i>+</i>
-      <h3>IVA</h3>
-      <p>Calcula precios con o sin IVA.</p>
-    </a>
-
-    <a class="card featured" data-name="profesor ia chat voz dudas preguntas" href="profesor.html">
-      <i>💬</i>
-      <h3>Profesor IA</h3>
-      <p>Resuelve dudas paso a paso por chat o voz, y vuelve a leer la conversación cuando quieras.</p>
-      <b>CHAT + VOZ</b>
-    </a>
-
-    <a class="card featured" data-name="examen apuntes estudiar" href="estudio/examen.html">
-      <i>📝</i>
-      <h3>Examen de prueba</h3>
-      <p>Sube apuntes y prepara un examen.</p>
-      <b>NUEVO</b>
-    </a>
-  </div>
-</section>
-
-<section class="banner"><div><span class="eyebrow">ZONA DE ESTUDIO</span><h2>Tus apuntes → tu examen.</h2><p>La IA genera preguntas a partir de tus apuntes y corrige tus respuestas para ayudarte a practicar.</p></div><a class="btn primary" href="estudio/examen.html">Probar</a></section>
+  <section class="banner">
+    <div>
+      <span class="eyebrow">UN PASO CADA VEZ</span>
+      <h2>No te limites a memorizar: entiende.</h2>
+      <p>Pregunta lo que no entiendes, practica con preguntas y vuelve a intentarlo cuando lo necesites.</p>
+    </div>
+    <a class="btn primary" href="profesor.html">Preguntar al profesor</a>
+  </section>
 </main>
+
 <footer class="site-footer">✦ Numelio · <a href="politica-privacidad.html">Privacidad</a> · <a href="aviso-legal.html">Aviso legal</a> · <a href="politica-cookies.html">Cookies</a></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="js/app.js"></script>
+<script>
+  const searchInput = document.getElementById("search");
+  const noResults = document.getElementById("noResults");
+  searchInput?.addEventListener("input", () => {
+    const visibleCards = [...document.querySelectorAll("#herramientas .card")];
+    noResults.hidden = visibleCards.some(card => card.style.display !== "none");
+  });
+</script>
 </body>
 </html>

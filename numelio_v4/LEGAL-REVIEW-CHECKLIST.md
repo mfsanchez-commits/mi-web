@@ -19,7 +19,7 @@ Estado: borrador interno de trabajo. No es asesoramiento jurídico ni una declar
 - [ ] Periodicidad exacta (mensual/anual) y momento del primer cobro.
 - [ ] Renovación automática, aviso de renovación si procede y forma de cancelar.
 - [ ] Qué funciones y límites incluye cada plan.
-- [ ] Procedimiento de baja y efecto sobre el acceso a Pro. Verificación técnica del 26-10-2026: existe `POST /api/billing/portal` y el botón «Gestionar suscripción» en `mi-espacio.html`; la configuración del portal de Stripe en modo test está activa, es la predeterminada y permite cancelar al final del periodo (`subscription_cancel.enabled=true`, `mode=at_period_end`). Pendiente prueba end-to-end de una suscripción de prueba, cancelación y sincronización del plan mediante webhook.
+- [ ] Procedimiento de baja y efecto sobre el acceso a Pro. Verificación técnica del 26-10-2026: existe `POST /api/billing/portal` y el botón «Gestionar suscripción» en `mi-espacio.html`; el portal de Stripe test está activo y permite cancelar al final del periodo (`subscription_cancel.enabled=true`, `mode=at_period_end`). Pendiente prueba end-to-end de suscripción de prueba, cancelación y sincronización del plan mediante webhook. La cuenta Stripe live todavía no tiene configuración de Customer Portal; habrá que configurarla y probarla antes de cualquier activación real, sin crearla ahora.
 - [ ] Política de reembolso y tratamiento del derecho de desistimiento para contenido/servicios digitales, con el flujo de consentimiento expreso que corresponda.
 - [ ] Identidad del comerciante que aparece en Stripe, descriptor del extracto y recibos/facturas.
 - [ ] Procedimiento de atención de reclamaciones.
@@ -50,7 +50,7 @@ Estado: borrador interno de trabajo. No es asesoramiento jurídico ni una declar
 - [ ] Definir la política de edad y contratación: distinguir consentimiento de datos personales, capacidad para contratar y reglas aplicables a menores.
 - [ ] Revisar si se necesita evaluación de impacto u otras medidas según los datos y riesgos reales.
 - [ ] Verificar cookies, localStorage, tecnologías similares y necesidad de un gestor de consentimiento; aceptar y rechazar cookies no necesarias deben ofrecerse de forma equivalente cuando sea exigible.
-- [ ] Confirmar el versionado de las condiciones: el checkout guarda fecha y versión en metadata de Stripe; conservar una copia inmutable de cada versión aceptada y vincularla al evento de aceptación. La revisión de Stripe test confirma que hay un webhook activo en `https://mi-web-ej4w.onrender.com/api/stripe/webhook` para `checkout.session.completed`, eventos de suscripción e invoices; queda probar su entrega real y el resultado en Supabase.
+- [ ] Confirmar el versionado de las condiciones: el checkout guarda fecha y versión en metadata de Stripe; conservar una copia inmutable de cada versión aceptada y vincularla al evento de aceptación. Stripe test tiene un webhook activo en `https://mi-web-ej4w.onrender.com/api/stripe/webhook` para checkout, suscripciones e invoices; queda probar la entrega real y el resultado en Supabase. Stripe live también tiene un webhook activo en ese endpoint, pero no se han activado cobros; mantener `STRIPE_MODE=test` hasta cerrar la revisión.
 - [ ] Revisar que la casilla de aceptación no esté premarcada y que los enlaces abran las versiones exactas aplicables antes de pagar.
 - [ ] Revisar la información de privacidad en formularios de cuenta y subida de archivos, no solo en el pie de página.
 

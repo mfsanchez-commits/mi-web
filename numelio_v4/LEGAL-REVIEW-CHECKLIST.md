@@ -19,7 +19,7 @@ Estado: borrador interno de trabajo. No es asesoramiento jurídico ni una declar
 - [ ] Periodicidad exacta (mensual/anual) y momento del primer cobro.
 - [ ] Renovación automática, aviso de renovación si procede y forma de cancelar.
 - [ ] Qué funciones y límites incluye cada plan.
-- [ ] Procedimiento de baja y efecto sobre el acceso a Pro. La revisión estática de `server.js` encuentra checkout y webhooks de suscripción, pero no una ruta de portal de cliente/cancelación; no anunciar que la baja online está resuelta hasta implementarla y probarla.
+- [ ] Procedimiento de baja y efecto sobre el acceso a Pro. Corrección tras revisar el código completo: sí existe `POST /api/billing/portal` y el botón «Gestionar suscripción» en `mi-espacio.html`. Pendiente probar en Stripe test que el portal está habilitado y permite cancelar; confirmar que los webhooks actualizan el plan y que la interfaz informa correctamente del fin de acceso.
 - [ ] Política de reembolso y tratamiento del derecho de desistimiento para contenido/servicios digitales, con el flujo de consentimiento expreso que corresponda.
 - [ ] Identidad del comerciante que aparece en Stripe, descriptor del extracto y recibos/facturas.
 - [ ] Procedimiento de atención de reclamaciones.
@@ -43,9 +43,9 @@ Estado: borrador interno de trabajo. No es asesoramiento jurídico ni una declar
 
 - [ ] Determinar la base jurídica de cada finalidad y documentarla; no usar un consentimiento genérico para todo.
 - [ ] Confirmar si se almacenan apuntes/archivos permanentemente en Supabase y qué tablas/objetos concretos contienen esos materiales.
-- [ ] Definir plazos reales de conservación y borrado para cuenta, apuntes, historial, límites de uso, registros y copias de seguridad.
+- [ ] Definir plazos reales de conservación y borrado para cuenta, apuntes, historial, límites de uso, registros y copias de seguridad. La tabla `generation_usage` no declara FK a `auth.users`, por lo que borrar la cuenta no elimina automáticamente esos registros.
 - [ ] Revisar contratos de encargado del tratamiento, subencargados y transferencias internacionales de Supabase, Anthropic, Stripe, Render y CDN.
-- [ ] Revisar configuración de RLS, almacenamiento, claves, registros y recuperación de cuenta. En la revisión estática de `server.js` no aparece una ruta de borrado integral de cuenta ni un endpoint de portal de facturación/cancelación de Stripe; comprobar si existe otro flujo y, si no, implementarlo y probarlo antes de cobrar a usuarios.
+- [ ] Revisar configuración de RLS, almacenamiento, claves, registros y recuperación de cuenta. En `server.js` y `cuenta.html` no se ha localizado un flujo para eliminar la cuenta completa. Diseñarlo y probarlo con borrado de Auth, apuntes, archivos del bucket `archivos-apuntes`, flashcards, historial de estudio/exámenes y registros de uso asociados; tratar por separado los datos que deban conservarse legalmente. Si existe suscripción activa, exigir cancelación o resolverla antes de eliminar la cuenta.
 - [ ] Definir procedimiento de solicitudes de derechos RGPD y contacto para reclamaciones.
 - [ ] Definir la política de edad y contratación: distinguir consentimiento de datos personales, capacidad para contratar y reglas aplicables a menores.
 - [ ] Revisar si se necesita evaluación de impacto u otras medidas según los datos y riesgos reales.

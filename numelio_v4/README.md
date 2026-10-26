@@ -36,7 +36,7 @@ Para producción, crea en el modo activo un producto/precio recurrente de Numeli
 
 Para activar los topes persistentes, ejecuta `supabase/generation_usage.sql` una vez en el SQL Editor de Supabase. En producción, si falta cualquiera de las variables de Supabase necesarias o la función SQL no está disponible, la API rechaza las operaciones de IA con un error 503 en lugar de recurrir a un contador temporal. En desarrollo se puede usar un contador en memoria, que se reinicia al reiniciar el proceso y no sirve como control de producción.
 
-Para mantener previsible el coste inicial, las funciones de IA aceptan texto y PDF con texto seleccionable, pero rechazan imágenes y PDF escaneados. Los adjuntos aceptados siguen sujetos a los límites de tamaño y texto definidos en el servidor.
+Las funciones de IA aceptan texto, PDF con texto seleccionable o escaneado, y fotos JPG, PNG o WEBP de hasta 10 MB. Las imágenes y los PDF escaneados se envían al modelo para lectura visual; revisa siempre los resultados, porque la IA puede interpretar mal partes poco legibles. Los límites de uso de IA siguen aplicándose para controlar el consumo.
 
 La clave de Anthropic solo se utiliza en `server.js`. Si alguna clave privada se publicó anteriormente, revócala y genera una nueva.
 

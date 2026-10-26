@@ -13,10 +13,10 @@
     const link = document.createElement("a");
     link.className = "btn primary numelio-upgrade-link";
     link.href = "/cuenta.html?next=upgrade";
-    link.textContent = "Mejorar a Pro · 9,99 €/mes";
+    link.textContent = "Mejorar a Pro";
     link.style.display = "inline-block";
     link.style.marginTop = "12px";
-    link.setAttribute("aria-label", "Mejorar a Pro por 9,99 euros al mes");
+    link.setAttribute("aria-label", "Mejorar a Pro");
     message.insertAdjacentElement("afterend", link);
   }
 

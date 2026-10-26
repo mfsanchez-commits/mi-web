@@ -173,6 +173,7 @@ function stripeCustomerForMode(appMetadata, mode) {
 
 app.post("/api/billing/checkout", async (req, res) => {
   try {
+    if (req.body?.termsAccepted !== true) return res.status(400).json({ error: "Debes aceptar las condiciones de uso y la política de privacidad antes de continuar." });
     if (!stripeConfigurationReady(true) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(503).json({ error: "La suscripción no está configurada completamente para el modo seleccionado." });
     }
@@ -184,13 +185,14 @@ app.post("/api/billing/checkout", async (req, res) => {
     if (identity.plan === "pro") return res.status(409).json({ error: "Tu cuenta ya tiene el plan Pro." });
     const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://numelio.es";
     const integrationSuffix = Array.from({ length: 8 }, () => "abcdefghijklmnopqrstuvwxyz"[crypto.randomInt(26)]).join("");
+    const termsAcceptedAt = new Date().toISOString();
     const session = await stripeClient().checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
       customer_email: identity.email,
       client_reference_id: identity.userId,
-      metadata: { supabase_user_id: identity.userId, app_product: "numelio_pro" },
-      subscription_data: { metadata: { supabase_user_id: identity.userId, app_product: "numelio_pro" } },
+      metadata: { supabase_user_id: identity.userId, app_product: "numelio_pro", terms_accepted_at: termsAcceptedAt, terms_version: "2026-10-26" },
+      subscription_data: { metadata: { supabase_user_id: identity.userId, app_product: "numelio_pro", terms_accepted_at: termsAcceptedAt, terms_version: "2026-10-26" } },
       success_url: origin + "/mi-espacio.html?subscription=success",
       cancel_url: origin + "/mi-espacio.html?subscription=cancelled",
       integration_identifier: "numelio_pro_" + integrationSuffix

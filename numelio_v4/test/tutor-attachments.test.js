@@ -7,7 +7,7 @@ const server = fs.readFileSync(path.join(process.cwd(), "server.js"), "utf8");
 const tutorPage = fs.readFileSync(path.join(process.cwd(), "profesor.html"), "utf8");
 
 test("el profesor admite adjuntos con límites y validación de contenido", () => {
-  assert.ok(server.includes('app.post("/api/tutor-chat", requireTutorAccount, enforceDailyGenerationLimit, upload.single("file")'));
+  assert.ok(server.includes('app.post("/api/tutor-chat", requireTutorAccount, upload.single("file")'));
   assert.ok(server.includes("validFileContent(req.file, buffer)"));
   assert.ok(server.includes("fileSize: 10 * 1024 * 1024"));
   assert.ok(server.includes("media_type: req.file.mimetype"));

@@ -395,7 +395,8 @@
         if (error || !data.session) { window.location.replace("cuenta.html?next=upgrade"); return; }
         const response = await fetch("/api/billing/checkout", {
           method: "POST",
-          headers: { Authorization: "Bearer " + data.session.access_token }
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + data.session.access_token },
+          body: JSON.stringify({ termsAccepted: true })
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "No se ha podido abrir el pago.");

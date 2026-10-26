@@ -21,7 +21,7 @@ Estado: borrador interno de trabajo. No es asesoramiento jurídico ni una declar
 - [ ] Qué funciones y límites incluye cada plan.
 - [ ] Procedimiento de baja y efecto sobre el acceso a Pro. Verificación técnica del 26-10-2026: existe `POST /api/billing/portal` y el botón «Gestionar suscripción» en `mi-espacio.html`; el portal test está activo. Se creó en Stripe live la configuración `bpc_1UUuO92VmxR7JG4YcV6hCrak`, marcada como predeterminada, con consulta de facturas, actualización de nombre/correo/método de pago y cancelación al final del periodo (`subscription_cancel.enabled=true`, `mode=at_period_end`). Precio live comprobado: 9,99 EUR/mes, activo. Webhook live habilitado en `https://mi-web-ej4w.onrender.com/api/stripe/webhook` para checkout, suscripciones e invoices. Pendiente prueba end-to-end en test de suscripción, cancelación y sincronización del plan mediante webhook; confirmar que el endpoint desplegado usa la configuración/clave live solo cuando se autorice el lanzamiento.
 - [ ] Política de reembolso y tratamiento del derecho de desistimiento para contenido/servicios digitales, con el flujo de consentimiento expreso que corresponda.
-- [ ] Identidad del comerciante que aparece en Stripe, descriptor del extracto y recibos/facturas.
+- [ ] Identidad del comerciante que aparece en Stripe, descriptor del extracto y recibos/facturas. Revisión de cuenta live el 26-10-2026: Stripe indica que la verificación de identidad del representante no está completada correctamente aunque `charges_enabled` y `payouts_enabled` aparecen habilitados. El titular debe resolver la verificación directamente en Stripe Dashboard antes de aceptar pagos reales; no compartir ni incluir documentos de identidad en el repositorio.
 - [ ] Procedimiento de atención de reclamaciones.
 - [ ] Confirmar si se venderá exclusivamente a consumidores en España o también a otros países.
 
@@ -55,6 +55,9 @@ Estado: borrador interno de trabajo. No es asesoramiento jurídico ni una declar
 - [ ] Revisar la información de privacidad en formularios de cuenta y subida de archivos, no solo en el pie de página.
 
 ## 5. Estado de publicación
+
+Bloqueo de pagos live detectado el 26-10-2026: la cuenta Stripe live muestra un estado de verificación de identidad no resuelto. No activar `STRIPE_MODE=live` ni anunciar la venta hasta que el titular complete la verificación desde el Dashboard, se revise la situación legal/fiscal y se realice una prueba integral en modo test. Los indicadores técnicos de capacidad de cobro no sustituyen la verificación de identidad ni una revisión legal.
+
 
 Los cuatro documentos públicos actuales contienen avisos de provisionalidad y campos pendientes. No eliminar esos avisos ni habilitar pagos reales hasta completar los datos y revisar los textos. Mantener Stripe en modo de pruebas.
 

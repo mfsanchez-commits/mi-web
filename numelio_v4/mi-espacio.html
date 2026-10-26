@@ -84,6 +84,12 @@
 
     <section class="plan-panel" aria-labelledby="planTitle">
       <div><span class="eyebrow">TU SUSCRIPCIÓN</span><h2 id="planTitle" style="margin:6px 0">Plan Gratis</h2><p id="planDescription">3 operaciones de IA al mes. Pro incluye hasta 30 al mes y un máximo de 3 al día.</p><p id="planEnvironment">Comprobando el entorno de pagos…</p></div>
+      <div style="flex-basis:100%;max-width:520px">
+        <label for="termsAcceptance" style="display:flex;align-items:flex-start;gap:10px;line-height:1.5;font-size:14px">
+          <input id="termsAcceptance" type="checkbox" style="margin-top:5px;flex-shrink:0">
+          <span>He leído las <a href="condiciones.html" target="_blank" rel="noopener noreferrer">condiciones de uso y suscripción</a> y la <a href="politica-privacidad.html" target="_blank" rel="noopener noreferrer">política de privacidad</a>.</span>
+        </label>
+      </div>
       <button class="btn primary" type="button" id="upgradeBtn">Mejorar a Pro · 9,99 €/mes</button>
       <button class="btn" type="button" id="managePlanBtn" hidden>Gestionar suscripción</button>
       <p id="planMessage" role="status" aria-live="polite"></p>
@@ -146,6 +152,7 @@
     const planDescription = document.getElementById("planDescription");
     const planEnvironment = document.getElementById("planEnvironment");
     const planMessage = document.getElementById("planMessage");
+    const termsAcceptance = document.getElementById("termsAcceptance");
     const query = new URLSearchParams(window.location.search);
     let awaitingPlanRefresh = false;
     const subjectNames = ["Matemáticas","Lengua","Física y Química","Biología","Geografía e Historia","Francés","Deporte","Religión","General","Otra"];
@@ -379,6 +386,11 @@
 
     upgradeBtn.addEventListener("click", async () => {
       if (!client) { planMessage.textContent = "No se ha podido cargar el servicio de cuentas."; return; }
+      if (!termsAcceptance?.checked) {
+        planMessage.textContent = "Lee y acepta las condiciones y la política de privacidad antes de continuar.";
+        termsAcceptance?.focus();
+        return;
+      }
       if (awaitingPlanRefresh) {
         planMessage.textContent = "Comprobando el estado de tu suscripción…";
         await client.auth.refreshSession();

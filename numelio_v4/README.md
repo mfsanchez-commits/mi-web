@@ -28,9 +28,9 @@ Configura estas variables en el panel de Render (Environment), nunca en archivos
 - `STRIPE_WEBHOOK_SECRET`: secreto `whsec_...` del endpoint de webhook creado en el mismo modo.
 - `PORT`: Render lo configura normalmente de forma automática.
 
-Los topes preparados para el lanzamiento son compartidos entre todas las funciones de IA: Gratis permite 3 operaciones al mes; Pro permite 30 al mes y un máximo de 3 al día. Crear y corregir un examen cuentan como dos operaciones. La clasificación Pro se lee de metadatos de servidor en Supabase y se mantiene separada por entorno (`stripe_test_plan` y `stripe_live_plan`), para que una suscripción de pruebas no dé acceso Pro en modo activo. La web consulta `/api/billing/status` para mostrar el entorno que usa el servidor.
+Los topes preparados para el lanzamiento son compartidos entre todas las funciones de IA: Gratis permite 3 operaciones al mes; Pro permite 30 al mes y un máximo de 3 al día. Crear y corregir un examen cuentan como dos operaciones. La clasificación Pro se lee de metadatos de servidor en Supabase y se mantiene separada por entorno (`stripe_test_plan` y `stripe_live_plan`), para que una suscripción de pruebas no dé acceso Pro en modo activo. La web consulta `/api/billing/status` para mostrar el entorno que usa el servidor. El backend acepta el origen `https://numelio.es` y `https://www.numelio.es`; configura el dominio personalizado y las URL de redirección de Supabase Auth antes de publicar el cambio.
 
-Para pruebas, configura `STRIPE_MODE=test` y usa la clave, el precio y el secreto del webhook del modo de pruebas. En Stripe, crea un endpoint de webhook de pruebas con URL `https://mi-web-ej4w.onrender.com/api/stripe/webhook` y activa `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid` y `invoice.payment_failed`.
+Para pruebas, configura `STRIPE_MODE=test` y usa la clave, el precio y el secreto del webhook del modo de pruebas. En Stripe, crea un endpoint de webhook de pruebas con URL `https://numelio.es/api/stripe/webhook` y activa `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid` y `invoice.payment_failed`.
 
 Para producción, crea en el modo activo un producto/precio recurrente de Numelio Pro y un endpoint live en la misma URL con esos eventos. Luego configura en Render `STRIPE_MODE=live`, una clave live, el ID del precio live y el secreto de firma de ese endpoint live. El servidor rechaza claves cuyo prefijo no corresponda al modo seleccionado y webhooks de otro modo. Cambiar a live habilita pagos reales; revisa el importe y la configuración antes de guardar o desplegar. Mantén cada secreto solo en las variables protegidas de Render; no lo pegues en el código ni en el chat. Los productos, precios y clientes de prueba no se convierten automáticamente en objetos live.
 
@@ -40,6 +40,6 @@ Para mantener previsible el coste inicial, las funciones de IA aceptan texto y P
 
 La clave de Anthropic solo se utiliza en `server.js`. Si alguna clave privada se publicó anteriormente, revócala y genera una nueva.
 
-En Supabase Auth, añade `https://mi-web-ej4w.onrender.com/cuenta.html?reset=1` a las URL de redirección permitidas para que la recuperación de contraseña pueda volver a Numelio.
+En Supabase Auth, añade `https://numelio.es/cuenta.html?reset=1` a las URL de redirección permitidas para que la recuperación de contraseña pueda volver a Numelio.
 
 Cuando se autorice la publicación de esta rama, configura también `/health` como **Health Check Path** del servicio web en Render. Ese endpoint solo comprueba que el proceso responde; no verifica por sí mismo que Supabase o Anthropic estén disponibles.

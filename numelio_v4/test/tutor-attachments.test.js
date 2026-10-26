@@ -23,3 +23,11 @@ test("la extracción de PDF normaliza espacios y la interfaz envía el archivo",
   assert.ok(tutorPage.includes("new FormData()"));
   assert.ok(tutorPage.includes('payload.append("file",file,file.name)'));
 });
+
+test("los generadores y el profesor envían fotos y PDF escaneados a la IA", () => {
+  assert.ok(server.includes('const messageContent = visualSource'));
+  assert.ok(server.includes('const content=visualSource'));
+  assert.ok(server.includes('lastMessage.content = [{ type: "text", text: lastMessage.content }, visualSource]'));
+  assert.ok(!server.includes("Por ahora la IA acepta texto y PDF con texto seleccionable; las imágenes y los PDF escaneados no están incluidos."));
+  assert.ok(!server.includes("Por ahora el profesor IA acepta texto y PDF con texto seleccionable; las imágenes y los PDF escaneados no están incluidos."));
+});

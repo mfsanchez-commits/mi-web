@@ -46,6 +46,8 @@ const upload = multer({
 });
 const allowedOrigins = new Set([
   "https://mi-web-ej4w.onrender.com",
+  "https://numelio.es",
+  "https://www.numelio.es",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ]);
@@ -180,7 +182,7 @@ app.post("/api/billing/checkout", async (req, res) => {
     const identity = await identifyRequester(req);
     if (!identity.userId || !identity.email) return res.status(401).json({ error: "Inicia sesión antes de mejorar a Pro." });
     if (identity.plan === "pro") return res.status(409).json({ error: "Tu cuenta ya tiene el plan Pro." });
-    const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://mi-web-ej4w.onrender.com";
+    const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://numelio.es";
     const integrationSuffix = Array.from({ length: 8 }, () => "abcdefghijklmnopqrstuvwxyz"[crypto.randomInt(26)]).join("");
     const session = await stripeClient().checkout.sessions.create({
       mode: "subscription",
@@ -224,7 +226,7 @@ app.post("/api/billing/portal", async (req, res) => {
     if (!identity.userId || !customerId) {
       return res.status(404).json({ error: "No se encontró una suscripción para esta cuenta." });
     }
-    const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://mi-web-ej4w.onrender.com";
+    const origin = allowedOrigins.has(req.get("origin")) ? req.get("origin") : "https://numelio.es";
     const session = await stripeClient().billingPortal.sessions.create({
       customer: customerId,
       return_url: origin + "/mi-espacio.html"
